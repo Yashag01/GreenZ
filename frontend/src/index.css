@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --color-slate-850: #151e2e;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
+  --color-emerald-500: #10b981;
+  --color-amber-500: #f59e0b;
+  --color-rose-500: #ef4444;
+
+  /* Flux Brand Colors */
+  --color-flux-charcoal: #171e19;
+  --color-flux-dark: #272727;
+  --color-flux-sage: #b7c6c2;
+  --color-flux-yellow: #ffe17c;
+
+  /* Fonts */
+  --font-anton: "Anton", sans-serif;
+  --font-satoshi: "Inter", sans-serif;
+}
+
+body {
+  @apply bg-[#f8f9fa] text-flux-charcoal font-satoshi antialiased m-0 p-0 overflow-x-hidden selection:bg-flux-yellow selection:text-flux-charcoal;
+}
+
+/* Base utility classes updated to Flux style */
+.panel {
+  @apply bg-white border border-flux-charcoal/10 rounded-xl p-6 shadow-sm;
+}
+.panel-dark {
+  @apply bg-flux-charcoal border border-flux-charcoal rounded-xl p-6 shadow-xl text-white;
+}
+
+.badge-normal {
+  @apply bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 px-2 py-1 rounded-md text-xs font-bold uppercase tracking-wider;
+}
+.badge-warning {
+  @apply bg-flux-yellow/20 text-amber-700 border border-flux-yellow px-2 py-1 rounded-md text-xs font-bold uppercase tracking-wider;
+}
+.badge-critical {
+  @apply bg-rose-500/10 text-rose-600 border border-rose-500/20 px-2 py-1 rounded-md text-xs font-bold uppercase tracking-wider;
+}
+
+/* Flux Landing Page Utilities */
+.bg-flux-grid {
+  background-size: 40px 40px;
+  background-image: linear-gradient(to right, rgba(183, 198, 194, 0.2) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(183, 198, 194, 0.2) 1px, transparent 1px);
+}
+.bg-flux-grid-dark {
+  background-size: 40px 40px;
+  background-image: linear-gradient(to right, rgba(23, 30, 25, 0.1) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(23, 30, 25, 0.1) 1px, transparent 1px);
+}

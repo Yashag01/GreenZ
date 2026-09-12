@@ -1,0 +1,145 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from typing import List
+from ..db.session import get_db
+from ..db.models import Asset, AssetHealth
+from ..schemas.responses import AssetSummary, AssetDetail
+from ..cache.analytics_store import store
+import pandas as pd
+
+router = APIRouter()
+
+
+def _safe_float(val, default=0.0):
+    try:
+        v = float(val)
+        return v if pd.notna(v) else default
+    except (TypeError, ValueError):
+        return default
+
+
+def _ranked_conditions_from_row(last_row):
+    """Extract and validate ranked_conditions from a dataframe row."""
+    ranked_conds = last_row.get("ranked_conditions")
+    if isinstance(ranked_conds, str):
+        import json
+        try:
+            ranked_conds = json.loads(ranked_conds)
+        except Exception:
+            ranked_conds = []
+    if not isinstance(ranked_conds, list):
+        ranked_conds = []
+    # Ensure each entry has expected fields
+    validated = []
+    for c in ranked_conds:
+        if isinstance(c, dict) and "condition_name" in c:
+            validated.append({
+                "condition_name": c.get("condition_name", "Unknown"),
+                "confidence": c.get("confidence"),  # str label or None
+                "evidence": c.get("evidence", []),
+            })
+    return validated
+
+
+@router.get("/assets", response_model=List[AssetSummary])
+def get_assets(db: Session = Depends(get_db)):
+    assets = db.query(Asset).all()
+
+    results = []
+    for a in assets:
+        df = store.get_processed(a.id)
+        if df is not None and not df.empty:
+            last_row = df.iloc[-1]
+            summary = {
+                "id": a.id,
+                "name": a.name,
+                "type": a.type,
+                "location": a.location,
+                "status": last_row.get("decision_status", last_row.get("status", "Monitor")),
+                "decision_status": last_row.get("decision_status", last_row.get("status", "Monitor")),
+                "failure_risk": _safe_float(last_row.get("failure_risk")),
+                "fault_type": str(last_row.get("fault_type", "None")),
+                "ranked_conditions": _ranked_conditions_from_row(last_row),
+                "recommended_action": str(last_row.get("recommended_action", "Continue routine monitoring.")),
+                "energy_at_risk": _safe_float(last_row.get("energy_at_risk")),
+                "revenue_at_risk": _safe_float(last_row.get("revenue_at_risk")),
+                "priority_score": _safe_float(last_row.get("priority_score")),
+                "priority_rank": 0,
+                "expected_power": _safe_float(last_row.get("expected_power")) if "expected_power" in last_row else None,
+                "deviation_pct": _safe_float(last_row.get("deviation_pct")) if "deviation_pct" in last_row else None,
+                "actual_power": _safe_float(last_row.get("actual_power")) if "actual_power" in last_row else None,
+            }
+            results.append(summary)
+
+    # Sort by priority score descending
+    results.sort(key=lambda x: x["priority_score"], reverse=True)
+    for i, res in enumerate(results):
+        res["priority_rank"] = i + 1
+
+    return results
+
+
+@router.get("/assets/{asset_id}", response_model=AssetDetail)
+def get_asset(asset_id: str, db: Session = Depends(get_db)):
+    a = db.query(Asset).filter(Asset.id == asset_id).first()
+    if not a:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    df = store.get_processed(asset_id)
+    if df is None or df.empty:
+        raise HTTPException(status_code=404, detail="Asset data not processed yet")
+
+    last_row = df.iloc[-1]
+    ranked_conds = _ranked_conditions_from_row(last_row)
+
+    reasons_raw = last_row.get("reasons", "")
+    reasons = str(reasons_raw).split(" | ") if reasons_raw else []
+
+    return {
+        "id": a.id,
+        "name": a.name,
+        "type": a.type,
+        "location": a.location,
+        "status": str(last_row.get("status", "Monitor")),
+        "decision_status": str(last_row.get("decision_status", "Monitor")),
+        "failure_risk": _safe_float(last_row.get("failure_risk")),
+        "fault_type": str(last_row.get("fault_type", "None")),
+        "ranked_conditions": ranked_conds,
+        "recommended_action": str(last_row.get("recommended_action", "Continue routine monitoring.")),
+        "energy_at_risk": _safe_float(last_row.get("energy_at_risk")),
+        "revenue_at_risk": _safe_float(last_row.get("revenue_at_risk")),
+        "priority_score": _safe_float(last_row.get("priority_score")),
+        "priority_rank": 0,
+        "expected_power": _safe_float(last_row.get("expected_power")) if "expected_power" in last_row else None,
+        "deviation_pct": _safe_float(last_row.get("deviation_pct")) if "deviation_pct" in last_row else None,
+        "actual_power": _safe_float(last_row.get("actual_power")) if "actual_power" in last_row else None,
+        "model_status": str(last_row.get("model_status", "N/A")),
+        "capacity_kw": _safe_float(a.capacity_kw),
+        "reasons": reasons,
+        "fault_confidence": last_row.get("fault_confidence"),  # now str or None
+    }
+
+
+@router.get("/assets/{asset_id}/history")
+def get_asset_history(asset_id: str):
+    df = store.get_processed(asset_id)
+    if df is None or df.empty:
+        raise HTTPException(status_code=404, detail="Asset data not found")
+
+    # Return last 96 rows (24h at 15-min intervals)
+    df_tail = df.tail(96).copy()
+
+    # Sanitize non-serializable columns
+    for col in df_tail.columns:
+        if df_tail[col].dtype == object:
+            df_tail[col] = df_tail[col].astype(str)
+
+    df_tail = df_tail.fillna(0)
+    df_tail["timestamp"] = df_tail["timestamp"].astype(str)
+
+    return df_tail.to_dict(orient="records")
+
+
+@router.get("/priority-list", response_model=List[AssetSummary])
+def get_priority_list(db: Session = Depends(get_db)):
+    return get_assets(db)

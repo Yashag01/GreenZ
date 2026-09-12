@@ -1,0 +1,5 @@
+w1_failure_probability: 0.35
+w2_revenue_risk: 0.3
+w3_severity: 0.2
+w4_asset_criticality: 0.1
+w5_persistence: 0.05
