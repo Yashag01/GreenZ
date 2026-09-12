@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
-from ..db.session import get_db
-from ..db.models import Alert
-from ..schemas.responses import InjectFaultRequest
-from ..cache.analytics_store import store
-from ..pipeline.orchestrator import run_pipeline
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from db.session import get_db
+from db.models import Alert
+from schemas.responses import InjectFaultRequest
+from cache.analytics_store import store
+from pipeline.orchestrator import run_pipeline
 import logging
 import random
 from sse_starlette.sse import EventSourceResponse
@@ -94,6 +97,8 @@ def reset_demo(db: Session = Depends(get_db)):
     # 1. Restore all from raw
     for aid in list(store.raw_data.keys()):
         df_raw = store.get_raw(aid)
+        # Use a simpler approach for reset - just reprocess the raw data
+        # Models are already cached in expected_model.py
         df_processed = run_pipeline(aid, df_raw)
         store.update_processed(aid, df_processed)
         

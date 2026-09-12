@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fetchAssets } from './api/client';
 import type { AssetSummary } from './types/api';
@@ -84,7 +84,7 @@ function MainDashboard() {
         </div>
         
         <div className="flex items-center gap-6">
-          <DemoControls onAction={loadData} />
+          <DemoControls />
           
           <div className="flex items-center gap-4 pl-6 border-l border-flux-charcoal/10">
             <Link to="/technician" className="text-xs font-bold uppercase tracking-wider text-flux-charcoal hover:text-flux-yellow transition-colors flex items-center gap-2 mr-2">

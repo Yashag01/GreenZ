@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { X, CheckCircle2, ChevronRight, Play } from 'lucide-react';
 import clsx from 'clsx';
 
 export default function LandingPage() {
   const [email, setEmail] = useState('');
+  const navigate = useNavigate();
+
+  const handleDemoLogin = () => {
+    localStorage.setItem('demo_bypass', 'true');
+    navigate('/dashboard');
+  };
 
   return (
     <div className="font-satoshi bg-white min-h-screen text-flux-charcoal selection:bg-flux-yellow selection:text-flux-charcoal">
@@ -19,9 +25,12 @@ export default function LandingPage() {
         <div className="hidden md:flex flex-1 justify-center gap-8 font-medium text-sm">
           <a href="#features" className="hover:text-flux-yellow transition-colors">Features</a>
           <a href="#how-it-works" className="hover:text-flux-yellow transition-colors">How it Works</a>
-          <a href="#testimonials" className="hover:text-flux-yellow transition-colors">Testimonials</a>
+          <a href="#about-project" className="hover:text-flux-yellow transition-colors">About Project</a>
         </div>
         <div className="flex-1 flex justify-end items-center gap-6">
+          <button onClick={handleDemoLogin} className="font-medium text-sm hover:opacity-70 transition-opacity text-flux-charcoal border border-flux-charcoal/20 px-4 py-2 rounded-full">
+            Demo Mode
+          </button>
           <Link to="/login" className="font-medium text-sm hover:opacity-70 transition-opacity">Login</Link>
           <Link to="/login" className="bg-flux-charcoal text-white px-6 py-2.5 rounded-full font-medium text-sm hover:bg-flux-dark transition-colors">
             Get Started
@@ -227,46 +236,40 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section id="testimonials" className="py-24 px-6 lg:px-12 bg-[#f8f9fa] border-t border-flux-charcoal/10">
-        <div className="max-w-[1400px] mx-auto">
-          <h2 className="font-anton text-5xl md:text-6xl uppercase text-center mb-16">Trusted by Operators</h2>
+      {/* Hackathon Info */}
+      <section id="about-project" className="py-24 px-6 lg:px-12 bg-[#f8f9fa] border-t border-flux-charcoal/10">
+        <div className="max-w-[1400px] mx-auto text-center">
+          <h2 className="font-anton text-5xl md:text-6xl uppercase text-center mb-16">Built for the Hackathon</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
             <div className="bg-white border border-flux-charcoal/10 p-8 rounded-2xl flex flex-col shadow-sm">
-              <div className="flex gap-1 mb-6 text-flux-yellow">{'★★★★★'.split('').map((s,i)=><span key={i} className="text-2xl">{s}</span>)}</div>
-              <p className="text-lg font-medium mb-8 flex-1">"We used to inspect 50 inverters manually every week. Flux tells us exactly which 2 need attention. It saved us lakhs in the first month."</p>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-flux-sage grayscale"></div>
-                <div>
-                  <div className="font-anton uppercase tracking-wider">Rahul D.</div>
-                  <div className="text-sm text-flux-charcoal/60">Solar Plant Manager</div>
-                </div>
+              <div className="flex gap-2 items-center mb-6">
+                <CheckCircle2 className="text-emerald-500" size={28} />
+                <h3 className="font-anton text-2xl uppercase">What's Built</h3>
               </div>
+              <p className="text-lg font-medium text-flux-charcoal/80">
+                We've implemented a fully functional real-time telemetry simulator, a React + Vite dashboard, and a working FastAPI backend that calculates anomalies using live background processing.
+              </p>
             </div>
 
             <div className="bg-flux-charcoal text-white p-8 rounded-2xl flex flex-col shadow-xl md:-translate-y-4">
-              <div className="flex gap-1 mb-6 text-flux-yellow">{'★★★★★'.split('').map((s,i)=><span key={i} className="text-2xl">{s}</span>)}</div>
-              <p className="text-lg font-medium mb-8 flex-1 text-flux-sage">"The priority ranking based on Revenue at Risk completely changed how we dispatch our field teams. Absolutely essential software."</p>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-white/20 grayscale"></div>
-                <div>
-                  <div className="font-anton uppercase tracking-wider text-white">Sarah K.</div>
-                  <div className="text-sm text-flux-sage/60">Director of O&M</div>
-                </div>
+              <div className="flex gap-2 items-center mb-6">
+                <CheckCircle2 className="text-flux-yellow" size={28} />
+                <h3 className="font-anton text-2xl uppercase">The Vision</h3>
               </div>
+              <p className="text-lg font-medium text-flux-sage">
+                Our goal is to demonstrate how shifting from scheduled maintenance to AI-driven predictive maintenance based on "Revenue at Risk" can fundamentally transform the renewable energy sector.
+              </p>
             </div>
 
             <div className="bg-white border border-flux-charcoal/10 p-8 rounded-2xl flex flex-col shadow-sm">
-              <div className="flex gap-1 mb-6 text-flux-yellow">{'★★★★★'.split('').map((s,i)=><span key={i} className="text-2xl">{s}</span>)}</div>
-              <p className="text-lg font-medium mb-8 flex-1">"The Gemini AI diagnostics are mind-blowing. It read our telemetry and local weather and correctly identified a thermal derating issue before the manufacturer did."</p>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-flux-sage grayscale"></div>
-                <div>
-                  <div className="font-anton uppercase tracking-wider">Arjun P.</div>
-                  <div className="text-sm text-flux-charcoal/60">Wind Farm Tech</div>
-                </div>
+              <div className="flex gap-2 items-center mb-6">
+                <Play className="text-amber-500" size={28} />
+                <h3 className="font-anton text-2xl uppercase">Next Steps</h3>
               </div>
+              <p className="text-lg font-medium text-flux-charcoal/80">
+                In the future, we plan to integrate a Gemini LLM agent for deeper natural language diagnostics, add real hardware SCADA connectivity, and build out the full technician mobile app view.
+              </p>
             </div>
           </div>
         </div>

@@ -1,12 +1,31 @@
 import pytest
 from fastapi.testclient import TestClient
-from backend.main import app
-import time
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Manual initialization for tests
+from db.session import engine, Base, SessionLocal
+from db.seed import seed_database
+from cache.analytics_store import store
+from db.models import Asset
+
+Base.metadata.create_all(bind=engine)
+db = SessionLocal()
+seed_database(db, force=True)
+assets = db.query(Asset).all()
+asset_ids = [a.id for a in assets]
+store.load_from_disk(asset_ids)
+for aid in asset_ids:
+    df_raw = store.get_raw(aid)
+    if df_raw is not None and not df_raw.empty:
+        from pipeline.orchestrator import run_pipeline
+        df_processed = run_pipeline(aid, df_raw)
+        store.update_processed(aid, df_processed)
+db.close()
+
+from main import app
 client = TestClient(app)
-
-# Wait a moment for background thread to load cache during tests
-time.sleep(2)
 
 def test_health():
     response = client.get("/api/health")

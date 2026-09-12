@@ -1,11 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from ..db.session import get_db
-from ..db.models import Asset, AssetHealth
-from ..schemas.responses import AssetSummary, AssetDetail
-from ..cache.analytics_store import store
+import sys
+import os
 import pandas as pd
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from db.session import get_db
+from db.models import Asset, AssetHealth
+from schemas.responses import AssetSummary, AssetDetail
+from cache.analytics_store import store
 
 router = APIRouter()
 
@@ -33,9 +36,11 @@ def _ranked_conditions_from_row(last_row):
     validated = []
     for c in ranked_conds:
         if isinstance(c, dict) and "condition_name" in c:
+            conf_raw = c.get("confidence")
+            conf = None if (conf_raw is None or (isinstance(conf_raw, float) and pd.isna(conf_raw))) else str(conf_raw)
             validated.append({
                 "condition_name": c.get("condition_name", "Unknown"),
-                "confidence": c.get("confidence"),  # str label or None
+                "confidence": conf,  # str label or None
                 "evidence": c.get("evidence", []),
             })
     return validated
@@ -95,6 +100,10 @@ def get_asset(asset_id: str, db: Session = Depends(get_db)):
     reasons_raw = last_row.get("reasons", "")
     reasons = str(reasons_raw).split(" | ") if reasons_raw else []
 
+    # Handle NaN confidence values
+    fault_conf_raw = last_row.get("fault_confidence")
+    fault_conf = None if (fault_conf_raw is None or (isinstance(fault_conf_raw, float) and pd.isna(fault_conf_raw))) else str(fault_conf_raw)
+
     return {
         "id": a.id,
         "name": a.name,
@@ -116,7 +125,7 @@ def get_asset(asset_id: str, db: Session = Depends(get_db)):
         "model_status": str(last_row.get("model_status", "N/A")),
         "capacity_kw": _safe_float(a.capacity_kw),
         "reasons": reasons,
-        "fault_confidence": last_row.get("fault_confidence"),  # now str or None
+        "fault_confidence": fault_conf,
     }
 
 

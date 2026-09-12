@@ -1,8 +1,11 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 import pandas as pd
-from ..cache.analytics_store import store
-from ..pipeline.orchestrator import run_pipeline
-from ..routes.demo import notify_clients
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from cache.analytics_store import store
+from pipeline.orchestrator import run_pipeline
+from routes.demo import notify_clients
 
 router = APIRouter(prefix="/upload", tags=["upload"])
 

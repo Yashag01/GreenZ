@@ -1,39 +1,26 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 import uvicorn
 import logging
 import threading
 import sys
 import os
 
-from .db.session import engine, Base, SessionLocal
-from .db.seed import seed_database
-from .cache.analytics_store import store
-from .pipeline.orchestrator import run_pipeline
+# Set up path for imports
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from .routes import health, assets, alerts, demo, upload
+from db.session import engine, Base, SessionLocal
+from db.seed import seed_database
+from cache.analytics_store import store
+from pipeline.orchestrator import run_pipeline
+from routes import health, assets, alerts, demo, upload
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Create DB tables
 Base.metadata.create_all(bind=engine)
-
-app = FastAPI(title="Predictive Maintenance API")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], # for demo
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-app.include_router(health.router, prefix="/api")
-app.include_router(assets.router, prefix="/api")
-app.include_router(alerts.router, prefix="/api")
-app.include_router(demo.router, prefix="/api")
-app.include_router(upload.router, prefix="/api")
 
 def startup_pipeline_task():
     logger.info("Background initialization starting...")
@@ -43,7 +30,7 @@ def startup_pipeline_task():
         seed_database(db, force=force_reset)
         
         # Load asset IDs from DB
-        from .db.models import Asset
+        from db.models import Asset
         assets = db.query(Asset).all()
         asset_ids = [a.id for a in assets]
         
@@ -65,12 +52,31 @@ def startup_pipeline_task():
     finally:
         db.close()
 
-@app.on_event("startup")
-def on_startup():
-    # Run in background to avoid blocking server start
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
     thread = threading.Thread(target=startup_pipeline_task)
     thread.start()
+    yield
+    # Shutdown
+    pass
+
+app = FastAPI(title="Predictive Maintenance API", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # for demo
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(health.router, prefix="/api")
+app.include_router(assets.router, prefix="/api")
+app.include_router(alerts.router, prefix="/api")
+app.include_router(demo.router, prefix="/api")
+app.include_router(upload.router, prefix="/api")
 
 if __name__ == "__main__":
     port = int(os.environ.get("BACKEND_PORT", 8000))
-    uvicorn.run("backend.main:app", host="0.0.0.0", port=port, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=port, reload=False)

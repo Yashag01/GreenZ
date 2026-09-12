@@ -1,6 +1,5 @@
-import React from 'react';
 import type { AssetSummary } from '../types/api';
-import { Activity, AlertTriangle, Zap, DollarSign } from 'lucide-react';
+import { Activity, DollarSign } from 'lucide-react';
 
 export default function FleetSummary({ assets }: { assets: AssetSummary[] }) {
   const healthy = assets.filter(a => a.decision_status === 'Monitor' || a.status === 'Monitor').length;

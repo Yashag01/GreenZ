@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
-from ..db.session import get_db
-from ..db.models import Alert
-from ..schemas.responses import AlertResponse
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from db.session import get_db
+from db.models import Alert
+from schemas.responses import AlertResponse
 
 router = APIRouter()
 

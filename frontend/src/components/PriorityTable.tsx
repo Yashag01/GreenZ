@@ -1,4 +1,4 @@
-import React from 'react';
+
 import type { AssetSummary } from '../types/api';
 import clsx from 'clsx';
 import { AlertCircle, ArrowRight, Download } from 'lucide-react';

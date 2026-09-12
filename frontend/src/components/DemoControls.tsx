@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useRef } from 'react';
-import { Play, RotateCcw, ChevronDown, ActivitySquare, Upload } from 'lucide-react';
+import { Play, RotateCcw, ChevronDown, Upload } from 'lucide-react';
 import { injectFault, resetDemo, uploadCsv } from '../api/client';
 
-export default function DemoControls({ onAction }: { onAction: () => void }) {
+export default function DemoControls() {
   const [loading, setLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -12,7 +12,13 @@ export default function DemoControls({ onAction }: { onAction: () => void }) {
     try {
       setLoading(true);
       setShowDropdown(false);
-      await injectFault('WTG-001', type, mag);
+      // Get first wind asset for gearbox wear, first solar for other faults
+      const { fetchAssets } = await import('../api/client');
+      const assets = await fetchAssets();
+      const windAsset = assets.find((a: any) => a.type === 'wind');
+      const solarAsset = assets.find((a: any) => a.type === 'solar');
+      const targetAsset = type === 'gearbox_wear' ? (windAsset?.id || assets[0]?.id) : (solarAsset?.id || assets[0]?.id);
+      await injectFault(targetAsset, type, mag);
     } catch (e) {
       console.error(e);
     } finally {
@@ -92,7 +98,7 @@ export default function DemoControls({ onAction }: { onAction: () => void }) {
             >
               <div className="font-anton text-xl text-white uppercase tracking-wide group-hover:text-flux-yellow transition-colors">1. Gearbox Wear (Wind)</div>
               <div className="text-xs text-flux-sage font-bold uppercase tracking-wider mt-1">-25% Power, +2 Vibration</div>
-              <div className="text-xs font-mono text-white/40 mt-2">Target: WT-27</div>
+              <div className="text-xs font-mono text-white/40 mt-2">Target: First Wind Asset</div>
             </button>
             <button 
               onClick={() => handleInject('inverter_thermal_derating', 0.20)}
@@ -100,7 +106,7 @@ export default function DemoControls({ onAction }: { onAction: () => void }) {
             >
               <div className="font-anton text-xl text-white uppercase tracking-wide group-hover:text-flux-yellow transition-colors">2. Thermal Derating (Solar)</div>
               <div className="text-xs text-flux-sage font-bold uppercase tracking-wider mt-1">-20% Power, Temp Spikes</div>
-              <div className="text-xs font-mono text-white/40 mt-2">Target: WT-27</div>
+              <div className="text-xs font-mono text-white/40 mt-2">Target: First Solar Asset</div>
             </button>
             <button 
               onClick={() => handleInject('soiling', 0.15)}
@@ -108,7 +114,7 @@ export default function DemoControls({ onAction }: { onAction: () => void }) {
             >
               <div className="font-anton text-xl text-white uppercase tracking-wide group-hover:text-flux-yellow transition-colors">3. Soiling / Shade</div>
               <div className="text-xs text-flux-sage font-bold uppercase tracking-wider mt-1">Slight Uniform Degradation</div>
-              <div className="text-xs font-mono text-white/40 mt-2">Target: WT-27</div>
+              <div className="text-xs font-mono text-white/40 mt-2">Target: First Solar Asset</div>
             </button>
             <button 
               onClick={() => handleInject('sensor_fault', 0.15)}
@@ -116,7 +122,7 @@ export default function DemoControls({ onAction }: { onAction: () => void }) {
             >
               <div className="font-anton text-xl text-white uppercase tracking-wide group-hover:text-flux-yellow transition-colors">4. Sensor Fault</div>
               <div className="text-xs text-flux-sage font-bold uppercase tracking-wider mt-1">Noisy Data Stream</div>
-              <div className="text-xs font-mono text-white/40 mt-2">Target: WT-27</div>
+              <div className="text-xs font-mono text-white/40 mt-2">Target: First Solar Asset</div>
             </button>
           </div>
         )}

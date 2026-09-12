@@ -1,10 +1,33 @@
 import pytest
 from fastapi.testclient import TestClient
-from backend.main import app
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from main import app
 import time
 
+# Initialize app to trigger background seeding manually
+from db.session import engine, Base, SessionLocal
+from db.seed import seed_database
+from cache.analytics_store import store
+from db.models import Asset
+
+# Manual initialization for tests
+Base.metadata.create_all(bind=engine)
+db = SessionLocal()
+seed_database(db, force=True)
+assets = db.query(Asset).all()
+asset_ids = [a.id for a in assets]
+store.load_from_disk(asset_ids)
+for aid in asset_ids:
+    df_raw = store.get_raw(aid)
+    if df_raw is not None and not df_raw.empty:
+        from pipeline.orchestrator import run_pipeline
+        df_processed = run_pipeline(aid, df_raw)
+        store.update_processed(aid, df_processed)
+db.close()
+
 client = TestClient(app)
-time.sleep(2) # Let background seed run
 
 def test_demo_injection_flow():
     # 1. Reset
@@ -12,7 +35,6 @@ def test_demo_injection_flow():
     assert resp.status_code == 200
     
     # 2. Get asset to verify it's normal
-    # Just grab the first solar asset
     assets = client.get("/api/assets").json()
     if not assets:
         pytest.skip("No assets available")

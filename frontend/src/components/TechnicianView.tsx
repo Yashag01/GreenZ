@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { fetchAssets, resolveIssue } from '../api/client';
 import type { AssetSummary } from '../types/api';
 import { supabase } from '../api/supabase';

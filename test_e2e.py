@@ -2,7 +2,7 @@ import urllib.request, json
 
 def req(url, data=None, method='GET'):
     body = json.dumps(data).encode() if data else None
-    r = urllib.request.Request(url, data=body, headers={'Content-Type':'application/json'}, method=method if data else 'GET')
+    r = urllib.request.Request(url, data=body, headers={'Content-Type':'application/json'}, method=method)
     resp = urllib.request.urlopen(r)
     return json.loads(resp.read())
 
@@ -31,6 +31,6 @@ if conds:
 print('Energy at risk:', post.get('energy_at_risk'), 'kWh')
 print('Action:', post.get('recommended_action'))
 
-req('http://localhost:8000/api/demo/reset', {}, 'POST')
+req('http://localhost:8000/api/demo/reset', None, 'POST')
 restored = req('http://localhost:8000/api/assets/' + aid)
 print('RESET decision={}, risk={:.1f}'.format(restored['decision_status'], restored['failure_risk']))

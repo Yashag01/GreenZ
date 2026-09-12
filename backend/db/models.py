@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, ForeignKey
 from .session import Base
-import datetime
+from datetime import datetime, timezone
 
 class Asset(Base):
     __tablename__ = "assets"
@@ -23,7 +23,7 @@ class AssetHealth(Base):
     priority_score = Column(Float, default=0.0)
     priority_rank = Column(Integer, default=999)
     model_status = Column(String, default="untrained")
-    last_updated = Column(DateTime, default=datetime.datetime.utcnow)
+    last_updated = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class Alert(Base):
     __tablename__ = "alerts"
@@ -32,5 +32,5 @@ class Alert(Base):
     severity = Column(String) # Warning, Critical
     message = Column(String)
     recommended_action = Column(String)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     acknowledged = Column(Boolean, default=False)
