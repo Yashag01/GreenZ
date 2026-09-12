@@ -49,7 +49,7 @@ export default function Login() {
     setLoading(true);
     setError(null);
     
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
     });
@@ -57,7 +57,15 @@ export default function Login() {
     if (error) {
       setError(error.message);
     } else {
-      setError('Check your email for the login link!');
+      if (data.user) {
+        // Initialize empty profile
+        await supabase.from('profiles').upsert({
+          id: data.user.id,
+          name: email.split('@')[0],
+          team_members: []
+        });
+      }
+      navigate('/dashboard');
     }
     setLoading(false);
   };

@@ -30,6 +30,9 @@ export interface AssetDetail extends AssetSummary {
   model_status: string;
   capacity_kw: number;
   reasons: string[];
+  action_immediate: string[];
+  action_inspect: string[];
+  action_long_term: string[];
   fault_confidence: string | null;  // Evidence strength label
 }
 
@@ -52,4 +55,11 @@ export interface HistoryPoint {
   vibration_mm_s?: number;
   irradiance_wm2?: number;
   wind_speed_ms?: number;
+}
+
+export interface PlaybackState {
+  is_playing: boolean;
+  speed: number;
+  cursor: number;
+  timestamp: string | null;
 }

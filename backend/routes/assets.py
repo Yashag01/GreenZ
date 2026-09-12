@@ -8,7 +8,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from db.session import get_db
 from db.models import Asset, AssetHealth
 from schemas.responses import AssetSummary, AssetDetail
+from schemas.requests import AssetUpdate
 from cache.analytics_store import store
+from routes.demo import notify_clients
 
 router = APIRouter()
 
@@ -97,8 +99,22 @@ def get_asset(asset_id: str, db: Session = Depends(get_db)):
     last_row = df.iloc[-1]
     ranked_conds = _ranked_conditions_from_row(last_row)
 
-    reasons_raw = last_row.get("reasons", "")
-    reasons = str(reasons_raw).split(" | ") if reasons_raw else []
+    import json
+
+    def _parse_json_list(raw_val):
+        if not raw_val:
+            return []
+        if isinstance(raw_val, list):
+            return raw_val
+        try:
+            return json.loads(str(raw_val))
+        except Exception:
+            return []
+
+    reasons = _parse_json_list(last_row.get("flag_reasons"))
+    action_immediate = _parse_json_list(last_row.get("action_immediate"))
+    action_inspect = _parse_json_list(last_row.get("action_inspect"))
+    action_long_term = _parse_json_list(last_row.get("action_long_term"))
 
     # Handle NaN confidence values
     fault_conf_raw = last_row.get("fault_confidence")
@@ -125,6 +141,9 @@ def get_asset(asset_id: str, db: Session = Depends(get_db)):
         "model_status": str(last_row.get("model_status", "N/A")),
         "capacity_kw": _safe_float(a.capacity_kw),
         "reasons": reasons,
+        "action_immediate": action_immediate,
+        "action_inspect": action_inspect,
+        "action_long_term": action_long_term,
         "fault_confidence": fault_conf,
     }
 
@@ -152,3 +171,31 @@ def get_asset_history(asset_id: str):
 @router.get("/priority-list", response_model=List[AssetSummary])
 def get_priority_list(db: Session = Depends(get_db)):
     return get_assets(db)
+
+@router.put("/assets/{asset_id}")
+def update_asset(asset_id: str, update_data: AssetUpdate, db: Session = Depends(get_db)):
+    a = db.query(Asset).filter(Asset.id == asset_id).first()
+    if not a:
+        raise HTTPException(status_code=404, detail="Asset not found")
+        
+    update_dict = update_data.model_dump(exclude_unset=True) if hasattr(update_data, "model_dump") else update_data.dict(exclude_unset=True)
+    for key, value in update_dict.items():
+        setattr(a, key, value)
+        
+    db.commit()
+    notify_clients(f"asset_updated:{asset_id}")
+    return {"status": "success", "message": "Asset updated"}
+
+@router.delete("/assets/{asset_id}")
+def delete_asset(asset_id: str, db: Session = Depends(get_db)):
+    a = db.query(Asset).filter(Asset.id == asset_id).first()
+    if not a:
+        raise HTTPException(status_code=404, detail="Asset not found")
+        
+    db.query(AssetHealth).filter(AssetHealth.asset_id == asset_id).delete()
+    db.delete(a)
+    db.commit()
+    
+    store.delete_asset(asset_id)
+    notify_clients(f"asset_deleted:{asset_id}")
+    return {"status": "success", "message": "Asset deleted"}

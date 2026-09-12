@@ -25,24 +25,15 @@ def run_pipeline(asset_id, df_asset, capacity_kw=None, tariff=None):
     # 2. Deviation Engine
     df = compute_deviation_metrics(df)
 
-    statuses = []
-    reasons_list = []
-    faults = []
-    confidences = []
-    ranked_list = []
-    action_list = []
-    risks = []
-    energy_risks = []
-    rev_risks = []
-    scores = []
-
     df["asset_criticality"] = 0.5
+    
+    # 2.5 Autoencoder Anomaly Detection (ARCANA inspired)
+    from .anomaly_detector import detect_anomalies_vectorized
+    df = detect_anomalies_vectorized(asset_id, df)
 
-    for idx, row in df.iterrows():
-        # 3. Anomaly Detection
+    def process_row(row):
         status, reasons = detect_anomalies(row)
 
-        # Map to decision status
         if status == "Normal":
             decision = "Monitor"
         elif status == "Warning":
@@ -50,43 +41,48 @@ def run_pipeline(asset_id, df_asset, capacity_kw=None, tariff=None):
         else:
             decision = "Inspect Now"
 
-        statuses.append(decision)
-        reasons_list.append(" | ".join(reasons))
-
-        # 4. Fault Classification
-        fault_type, conf, ranked, action = classify_fault(row, decision)
-        faults.append(fault_type)
-        confidences.append(conf)
-        ranked_list.append(ranked)
-        action_list.append(action)
-
-        # 5. Failure Risk Score
+        fault_type, conf, ranked, action_plan = classify_fault(row, decision)
+        
+        # Risk computation
         risk = compute_failure_risk(row)
-        risks.append(risk)
-        row["failure_risk"] = risk
+        
+        # Economics computation
+        row_for_econ = row.copy()
+        row_for_econ["failure_risk"] = risk
+        e_risk, r_risk = compute_economics(row_for_econ, tariff)
+        
+        # Priority computation
+        row_for_prio = row_for_econ.copy()
+        row_for_prio["revenue_at_risk"] = r_risk
+        row_for_prio["status"] = decision
+        score = compute_priority(row_for_prio)
 
-        # 6. Energy & Revenue at Risk
-        e_risk, r_risk = compute_economics(row, tariff)
-        energy_risks.append(e_risk)
-        rev_risks.append(r_risk)
-        row["revenue_at_risk"] = r_risk
+        import json
+        return pd.Series({
+            "status": decision,
+            "decision_status": decision,
+            "flag_reasons": json.dumps(reasons),
+            "action_immediate": json.dumps(action_plan.get("immediate", [])),
+            "action_inspect": json.dumps(action_plan.get("inspect", [])),
+            "action_long_term": json.dumps(action_plan.get("long_term", [])),
+            "fault_type": fault_type,
+            "fault_confidence": conf,
+            "ranked_conditions": ranked,
+            "recommended_action": action_plan.get("immediate", [""])[0] if action_plan.get("immediate") else "Continue monitoring.",
+            "failure_risk": risk,
+            "energy_at_risk": e_risk,
+            "revenue_at_risk": r_risk,
+            "priority_score": score
+        })
 
-        # 7. Priority Score
-        row["status"] = decision
-        score = compute_priority(row)
-        scores.append(score)
-
-    df["status"] = statuses
-    df["decision_status"] = statuses
-    df["reasons"] = reasons_list
-    df["fault_type"] = faults
-    df["fault_confidence"] = confidences
-    df["ranked_conditions"] = ranked_list
-    df["recommended_action"] = action_list
-    df["failure_risk"] = risks
-    df["energy_at_risk"] = energy_risks
-    df["revenue_at_risk"] = rev_risks
-    df["priority_score"] = scores
+    if not df.empty:
+        results = df.apply(process_row, axis=1)
+        for col in results.columns:
+            df[col] = results[col]
+    else:
+        for col in ["status", "decision_status", "flag_reasons", "action_immediate", "action_inspect", "action_long_term", "fault_type", "fault_confidence", "ranked_conditions", "recommended_action", "failure_risk", "energy_at_risk", "revenue_at_risk", "priority_score"]:
+            df[col] = pd.Series(dtype='object')
+            
     df["model_status"] = model_status
 
     return df

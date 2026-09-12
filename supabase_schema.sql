@@ -3,9 +3,11 @@ create table public.profiles (
   id uuid references auth.users not null primary key,
   email text,
   full_name text,
+  name text,
   company_name text,
   factory_location text, -- e.g., "Gujarat, India"
   factory_type text,     -- e.g., "solar_and_wind"
+  team_members jsonb default '[]'::jsonb,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );

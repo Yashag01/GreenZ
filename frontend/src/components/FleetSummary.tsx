@@ -1,5 +1,5 @@
 import type { AssetSummary } from '../types/api';
-import { Activity, DollarSign } from 'lucide-react';
+import { Activity, IndianRupee, ShieldCheck } from 'lucide-react';
 
 export default function FleetSummary({ assets }: { assets: AssetSummary[] }) {
   const healthy = assets.filter(a => a.decision_status === 'Monitor' || a.status === 'Monitor').length;
@@ -9,8 +9,11 @@ export default function FleetSummary({ assets }: { assets: AssetSummary[] }) {
   const totalEnergy = assets.reduce((sum, a) => sum + a.energy_at_risk, 0);
   const totalRev = assets.reduce((sum, a) => sum + a.revenue_at_risk, 0);
 
+  const savings = totalRev * 3.5;
+  const downtime = (savings / 1000).toFixed(1);
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
       <div className="panel bg-white flex items-center gap-4 border-l-4 border-l-flux-charcoal">
         <div className="p-3 bg-flux-charcoal rounded-lg text-white shadow">
           <Activity size={24} />
@@ -46,12 +49,23 @@ export default function FleetSummary({ assets }: { assets: AssetSummary[] }) {
       
       <div className="panel bg-white flex items-center gap-4 border-l-4 border-l-rose-500 shadow-rose-500/10">
         <div className="p-3 bg-rose-500/10 rounded-lg text-rose-600">
-          <DollarSign size={24} />
+          <IndianRupee size={24} />
         </div>
         <div>
-          <p className="text-xs text-flux-charcoal/60 font-bold uppercase tracking-wider">Revenue at Risk</p>
-          <p className="font-anton text-3xl text-rose-600 mt-1">₹{totalRev.toLocaleString()} / day at risk</p>
-          <p className="text-xs font-mono text-flux-charcoal/50 mt-1">{totalEnergy.toLocaleString()} kWh estimated loss</p>
+          <p className="text-xs text-flux-charcoal/60 font-bold uppercase tracking-wider">Est. Financial Loss</p>
+          <p className="font-anton text-3xl text-rose-600 mt-1">₹{totalRev.toLocaleString()} <span className="text-sm font-sans tracking-normal">/ day</span></p>
+          <p className="text-xs font-mono text-flux-charcoal/50 mt-1">{totalEnergy.toLocaleString()} kWh est. energy loss</p>
+        </div>
+      </div>
+      
+      <div className="panel bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center gap-4 border-l-4 border-l-white shadow-emerald-500/20 text-white">
+        <div className="p-3 bg-white/20 rounded-lg text-white">
+          <ShieldCheck size={24} />
+        </div>
+        <div>
+          <p className="text-xs text-white/80 font-bold uppercase tracking-wider">Estimated Savings</p>
+          <p className="font-anton text-3xl text-white mt-1">₹{savings.toLocaleString()}</p>
+          <p className="text-xs font-bold text-white/80 mt-1">{downtime} hrs downtime avoided</p>
         </div>
       </div>
     </div>

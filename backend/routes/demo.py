@@ -1,17 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 import sys
 import os
+import asyncio
+import logging
+import random
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from db.session import get_db
 from db.models import Alert
 from schemas.responses import InjectFaultRequest
 from cache.analytics_store import store
 from pipeline.orchestrator import run_pipeline
-import logging
-import random
 from sse_starlette.sse import EventSourceResponse
-import asyncio
 
 router = APIRouter(prefix="/demo")
 logger = logging.getLogger(__name__)
@@ -34,98 +36,224 @@ async def message_stream():
                 msg = await q.get()
                 yield {"data": msg}
         except asyncio.CancelledError:
-            clients.remove(q)
+            if q in clients:
+                clients.remove(q)
             
     return EventSourceResponse(event_generator())
 
+# --- Playback Engine Background Task ---
+_playback_task = None
+
+async def playback_loop():
+    logger.info("Playback loop started.")
+    while True:
+        try:
+            is_playing = False
+            speed = 100
+            with store.lock:
+                is_playing = store.is_playing
+                speed = store.playback_speed
+                
+            if not is_playing:
+                await asyncio.sleep(0.5)
+                continue
+                
+            # Sleep based on speed (100x = fast, 1x = slow)
+            # Assuming 15-minute data = 900 seconds. At 100x, 1 tick = 9s. We'll make it faster for demo.
+            sleep_time = max(0.5, 90.0 / float(speed))
+            await asyncio.sleep(sleep_time)
+            
+            with store.lock:
+                # Check if we reached the end of the data
+                first_aid = list(store.full_raw_data.keys())[0] if store.full_raw_data else None
+                if first_aid and store.playback_cursor >= len(store.full_raw_data[first_aid]):
+                    store.is_playing = False
+                    continue
+                
+                # Advance cursor
+                store.playback_cursor += 1
+
+            # Process the new window for each asset
+            asset_ids = list(store.full_raw_data.keys())
+            for aid in asset_ids:
+                df_raw = store.get_raw(aid)
+                if df_raw is None or df_raw.empty:
+                    continue
+                
+                # Apply injected faults if any
+                if aid in store.injected_faults:
+                    fault = store.injected_faults[aid]
+                    # We mutate the last 12 rows up to cursor
+                    start_mutate = max(0, len(df_raw) - 12)
+                    target_idx = df_raw.index[start_mutate:]
+                    
+                    req_type = fault["type"]
+                    req_mag = fault["magnitude"]
+                    
+                    if req_type == "inverter_thermal_derating":
+                        df_raw.loc[target_idx, "actual_power"] *= (1 - req_mag)
+                        if "module_temp_c" in df_raw.columns:
+                            df_raw.loc[target_idx, "module_temp_c"] += (req_mag * 15)
+                    elif req_type in ("inverter_underperformance", "soiling"):
+                        reduction = req_mag if req_type == "inverter_underperformance" else req_mag * 0.5
+                        df_raw.loc[target_idx, "actual_power"] *= (1 - reduction)
+                    elif req_type == "sensor_fault":
+                        mean_pwr = df_raw.loc[target_idx, "actual_power"].mean()
+                        noise = (random.random() - 0.5) * req_mag * mean_pwr
+                        df_raw.loc[target_idx, "actual_power"] += noise
+                    elif req_type == "gearbox_wear":
+                        df_raw.loc[target_idx, "actual_power"] *= (1 - (req_mag * 0.2))
+                        if "vibration_mm_s" in df_raw.columns:
+                            df_raw.loc[target_idx, "vibration_mm_s"] += (req_mag * 2)
+
+                # Re-run pipeline
+                df_processed = run_pipeline(aid, df_raw)
+                store.update_processed(aid, df_processed)
+
+            notify_clients("tick")
+
+        except Exception as e:
+            logger.error(f"Playback error: {e}")
+            await asyncio.sleep(1.0)
+
+def start_playback_engine():
+    global _playback_task
+    if _playback_task is None:
+        loop = asyncio.get_event_loop()
+        _playback_task = loop.create_task(playback_loop())
+
+@router.on_event("startup")
+async def startup_event():
+    start_playback_engine()
+
+# --- Playback API Endpoints ---
+class PlaybackSpeedRequest(BaseModel):
+    speed: int
+
+@router.get("/playback/state")
+def get_playback_state():
+    return store.get_playback_state()
+
+@router.post("/playback/play")
+def play_playback():
+    with store.lock:
+        store.is_playing = True
+    notify_clients("playback_started")
+    return {"status": "success", "state": store.get_playback_state()}
+
+@router.post("/playback/pause")
+def pause_playback():
+    with store.lock:
+        store.is_playing = False
+    notify_clients("playback_paused")
+    return {"status": "success", "state": store.get_playback_state()}
+
+@router.post("/playback/speed")
+def set_playback_speed(req: PlaybackSpeedRequest):
+    with store.lock:
+        store.playback_speed = max(1, req.speed)
+    notify_clients("playback_speed_changed")
+    return {"status": "success", "state": store.get_playback_state()}
+
+
 @router.post("/inject-fault")
 def inject_fault(req: InjectFaultRequest, db: Session = Depends(get_db)):
-    # 1. Get raw baseline data
-    df_raw = store.get_raw(req.asset_id)
-    if df_raw is None:
-        raise HTTPException(status_code=404, detail="Asset not found in memory")
+    # Register the fault in the store so playback applies it
+    with store.lock:
+        store.injected_faults[req.asset_id] = {
+            "type": req.fault_type,
+            "magnitude": req.fault_magnitude
+        }
         
-    df_injected = df_raw.copy()
-    
-    # 2. Mutate last 12 rows based on fault type
-    target_idx = df_injected.index[-12:]
-    
-    if req.fault_type == "inverter_thermal_derating":
-        df_injected.loc[target_idx, "actual_power"] *= (1 - req.fault_magnitude)
-        if "module_temp_c" in df_injected.columns:
-            df_injected.loc[target_idx, "module_temp_c"] += (req.fault_magnitude * 15)
+    # Force an immediate pipeline run for responsive UI
+    df_raw = store.get_raw(req.asset_id)
+    if df_raw is not None:
+        target_idx = df_raw.index[-12:]
+        if req.fault_type == "inverter_thermal_derating":
+            df_raw.loc[target_idx, "actual_power"] *= (1 - req.fault_magnitude)
+            if "module_temp_c" in df_raw.columns:
+                df_raw.loc[target_idx, "module_temp_c"] += (req.fault_magnitude * 15)
+        elif req.fault_type in ("inverter_underperformance", "soiling"):
+            reduction = req.fault_magnitude if req.fault_type == "inverter_underperformance" else req.fault_magnitude * 0.5
+            df_raw.loc[target_idx, "actual_power"] *= (1 - reduction)
+        elif req.fault_type == "sensor_fault":
+            mean_pwr = df_raw.loc[target_idx, "actual_power"].mean()
+            noise = (random.random() - 0.5) * req.fault_magnitude * mean_pwr
+            df_raw.loc[target_idx, "actual_power"] += noise
+        elif req.fault_type == "gearbox_wear":
+            df_raw.loc[target_idx, "actual_power"] *= (1 - (req.fault_magnitude * 0.2))
+            if "vibration_mm_s" in df_raw.columns:
+                df_raw.loc[target_idx, "vibration_mm_s"] += (req.fault_magnitude * 2)
 
-    elif req.fault_type in ("inverter_underperformance", "soiling"):
-        # Both produce a uniform power reduction without temperature change
-        reduction = req.fault_magnitude if req.fault_type == "inverter_underperformance" else req.fault_magnitude * 0.5
-        df_injected.loc[target_idx, "actual_power"] *= (1 - reduction)
-
-    elif req.fault_type == "sensor_fault":
-        mean_pwr = df_injected.loc[target_idx, "actual_power"].mean()
-        noise = (random.random() - 0.5) * req.fault_magnitude * mean_pwr
-        df_injected.loc[target_idx, "actual_power"] += noise
-
-    elif req.fault_type == "gearbox_wear":
-        df_injected.loc[target_idx, "actual_power"] *= (1 - (req.fault_magnitude * 0.2))
-        if "vibration_mm_s" in df_injected.columns:
-            df_injected.loc[target_idx, "vibration_mm_s"] += (req.fault_magnitude * 2)
-
-    # 3. Re-run pipeline
-    df_processed = run_pipeline(req.asset_id, df_injected)
-    
-    # 4. Update cache
-    store.update_processed(req.asset_id, df_processed)
-    
-    # 5. Create alert
-    last_row = df_processed.iloc[-1]
-    alert = Alert(
-        asset_id=req.asset_id,
-        severity="Critical" if last_row.get("decision_status") == "Inspect Now" else "Warning",
-        message=f"Fault Injected: {req.fault_type.replace('_', ' ').title()}",
-        recommended_action=last_row.get("recommended_action", f"Inspect {req.asset_id}.")
-    )
-    db.add(alert)
-    db.commit()
-    
-    # 6. Notify frontend
+        df_processed = run_pipeline(req.asset_id, df_raw)
+        store.update_processed(req.asset_id, df_processed)
+        
+        last_row = df_processed.iloc[-1]
+        alert = Alert(
+            asset_id=req.asset_id,
+            severity="Critical" if last_row.get("decision_status") == "Inspect Now" else "Warning",
+            message=f"Fault Injected: {req.fault_type.replace('_', ' ').title()}",
+            recommended_action=last_row.get("recommended_action", f"Inspect {req.asset_id}.")
+        )
+        db.add(alert)
+        db.commit()
+        
     notify_clients(f"asset_updated:{req.asset_id}")
-    
     return {"status": "success", "message": f"Injected {req.fault_type} into {req.asset_id}"}
+
 
 @router.post("/reset")
 def reset_demo(db: Session = Depends(get_db)):
-    # 1. Restore all from raw
-    for aid in list(store.raw_data.keys()):
-        df_raw = store.get_raw(aid)
-        # Use a simpler approach for reset - just reprocess the raw data
-        # Models are already cached in expected_model.py
-        df_processed = run_pipeline(aid, df_raw)
-        store.update_processed(aid, df_processed)
+    # Clear all data
+    with store.lock:
+        store.full_raw_data.clear()
+        store.processed_data.clear()
+        store.injected_faults.clear()
+        store.playback_cursor = 96
+        store.is_playing = False
         
-    # 2. Clear injected alerts
-    db.query(Alert).filter(Alert.message.like("Fault Injected:%")).delete()
+    db.query(Alert).delete()
+    from db.models import AssetHealth, Asset
+    db.query(AssetHealth).delete()
+    db.query(Asset).delete()
     db.commit()
     
-    # 3. Notify frontend
     notify_clients("demo_reset")
+    return {"status": "success", "message": "All assets cleared"}
+
+@router.post("/seed")
+def seed_demo(db: Session = Depends(get_db)):
+    from db.seed import seed_database
+    seed_database(db, force=True)
     
-    return {"status": "success", "message": "Demo reset to baseline"}
+    # Load back into cache
+    asset_ids = [a.id for a in db.query(Asset).all()]
+    store.load_from_disk(asset_ids)
+    
+    # Process baseline
+    for aid in asset_ids:
+        df_raw = store.get_raw(aid)
+        if df_raw is not None and not df_raw.empty:
+            df_processed = run_pipeline(aid, df_raw)
+            store.update_processed(aid, df_processed)
+            
+    notify_clients("demo_reset")
+    return {"status": "success", "message": "Sample assets loaded"}
+
 
 @router.post("/resolve/{asset_id}")
 def resolve_issue(asset_id: str, db: Session = Depends(get_db)):
-    # 1. Restore specific asset from raw
+    with store.lock:
+        if asset_id in store.injected_faults:
+            del store.injected_faults[asset_id]
+            
     df_raw = store.get_raw(asset_id)
-    if df_raw is None:
-        raise HTTPException(status_code=404, detail="Asset not found")
+    if df_raw is not None:
+        df_processed = run_pipeline(asset_id, df_raw)
+        store.update_processed(asset_id, df_processed)
         
-    df_processed = run_pipeline(asset_id, df_raw)
-    store.update_processed(asset_id, df_processed)
-    
-    # 2. Clear related injected alerts
     db.query(Alert).filter(Alert.asset_id == asset_id, Alert.message.like("Fault Injected:%")).delete()
     db.commit()
     
-    # 3. Notify frontend
     notify_clients(f"asset_updated:{asset_id}")
-    
     return {"status": "success", "message": f"Issue resolved for {asset_id}"}

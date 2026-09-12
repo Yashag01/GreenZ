@@ -18,12 +18,19 @@ def classify_fault(row, status):
                 "No persistent deviation detected"
             ]
         }]
-        return "None", None, ranked, "No immediate action required. Continue routine monitoring."
+        return "None", None, ranked, {
+            "immediate": ["No immediate action required."],
+            "inspect": [],
+            "long_term": ["Continue routine monitoring."]
+        }
 
     is_solar = "module_temp_c" in row or "irradiance_wm2" in row
     dev_pct = float(row.get("deviation_pct", 0.0) or 0.0)
     streak = int(row.get("consecutive_anomaly_count", 1) or 1)
     rolling_dev = float(row.get("rolling_mean_dev", dev_pct) or dev_pct)
+    
+    root_cause = row.get("root_cause_feature", "Unknown")
+    ae_score = row.get("ae_anomaly_score", 0.0)
 
     ranked_conditions = []
 
@@ -56,11 +63,14 @@ def classify_fault(row, status):
                 f"Irradiance adequate ({irr_str} p.u.)" if irr else "",
                 f"Deviation persisted for {streak} interval(s)" if persistent else "",
             ]
+            if root_cause == "module_temp_c":
+                evidence_notes.append("Autoencoder identified temperature as the primary statistical root cause.")
             evidence_notes = [e for e in evidence_notes if e]
 
+            confidence = "High" if (persistent and severe_dev) or root_cause == "module_temp_c" else "Moderate"
             ranked_conditions.append({
                 "condition_name": "Inverter Thermal Derating",
-                "confidence": "High" if persistent and severe_dev else "Moderate",
+                "confidence": confidence,
                 "evidence": evidence_notes
             })
             ranked_conditions.append({
@@ -74,7 +84,11 @@ def classify_fault(row, status):
                     "confidence": "Low",
                     "evidence": ["Single-interval deviation — may be transient or sensor noise"]
                 })
-            action = "Inspect inverter cooling system, clean heat sinks, verify enclosure fans and temperature sensors."
+            action_plan = {
+                "immediate": ["Check SCADA for thermal derating active flags.", "Verify ambient vs module delta."],
+                "inspect": ["Inspect inverter cooling system", "Clean heat sinks", "Verify enclosure fans and temperature sensors."],
+                "long_term": ["Review thermal imaging of array if module temperatures remain elevated."]
+            }
 
         elif severe_dev:
             # Large step-down without clear temperature cause
@@ -99,8 +113,12 @@ def classify_fault(row, status):
                 "condition_name": "Inverter Underperformance",
                 "confidence": "Low",
                 "evidence": ["MPPT tracking issue possible"]
-            })
-            action = "Check string open-circuit voltage (Voc), inspect combiner box fuses, measure individual string currents."
+                })
+            action_plan = {
+                "immediate": ["Isolate affected string if safety risk is present.", "Check string open-circuit voltage (Voc)."],
+                "inspect": ["Inspect combiner box fuses", "Measure individual string currents."],
+                "long_term": ["Perform I-V curve tracing to identify degraded modules."]
+            }
 
         else:
             # Moderate deviation — most likely soiling or general underperformance
@@ -125,8 +143,12 @@ def classify_fault(row, status):
                 "condition_name": "Sensor Calibration Drift",
                 "confidence": "Low",
                 "evidence": ["Irradiance sensor misalignment could shift apparent deviation"]
-            })
-            action = "Schedule visual inspection and panel surface cleaning. Compare with neighboring inverter performance."
+                })
+            action_plan = {
+                "immediate": ["Compare with neighboring inverter performance.", "Check localized weather satellite data."],
+                "inspect": ["Schedule visual inspection and panel surface cleaning.", "Check for vegetation growth or new obstructions."],
+                "long_term": ["Optimize cleaning schedule based on soiling accumulation rate."]
+            }
 
     else:
         # Wind Asset
@@ -151,11 +173,14 @@ def classify_fault(row, status):
                 f"Wind speed: {speed_str}",
                 f"Persistent across {streak} reading(s)" if persistent else "",
             ]
+            if root_cause == "vibration_mm_s":
+                evidence_notes.append("Autoencoder identified vibration as the primary statistical root cause.")
             evidence_notes = [e for e in evidence_notes if e]
 
+            confidence = "High" if (persistent and severe_dev) or root_cause == "vibration_mm_s" else "Moderate"
             ranked_conditions.append({
                 "condition_name": "Gearbox Deterioration",
-                "confidence": "High" if persistent and severe_dev else "Moderate",
+                "confidence": confidence,
                 "evidence": evidence_notes
             })
             ranked_conditions.append({
@@ -167,8 +192,12 @@ def classify_fault(row, status):
                 "condition_name": "Lubrication Issue",
                 "confidence": "Low",
                 "evidence": ["Dry lubrication increases mechanical friction and vibration"]
-            })
-            action = "Inspect gearbox. Sample lubrication oil for particle count. Check main bearing temperature and vibration spectrum."
+                })
+            action_plan = {
+                "immediate": ["Reduce turbine power setpoint to limit mechanical stress.", "Check vibration spectrum in SCADA."],
+                "inspect": ["Inspect gearbox.", "Sample lubrication oil for particle count.", "Check main bearing temperature."],
+                "long_term": ["Schedule preventative maintenance for drivetrain components."]
+            }
 
         elif severe_dev:
             evidence_notes = [
@@ -192,8 +221,12 @@ def classify_fault(row, status):
                 "condition_name": "Power Converter Issue",
                 "confidence": "Low",
                 "evidence": ["Electrical torque mismatch can reduce captured power"]
-            })
-            action = "Check blade pitch drive calibration. Inspect blade surface for erosion or icing. Verify yaw position sensor."
+                })
+            action_plan = {
+                "immediate": ["Verify yaw position sensor reading.", "Check blade pitch drive calibration parameters."],
+                "inspect": ["Inspect blade surface for erosion, icing, or structural damage.", "Verify pitch actuator mechanism."],
+                "long_term": ["Perform aerodynamic imbalance analysis using drone imaging."]
+            }
 
         else:
             evidence_notes = [
@@ -217,8 +250,12 @@ def classify_fault(row, status):
                 "condition_name": "Yaw Misalignment",
                 "confidence": "Low",
                 "evidence": ["Moderate heading error consistent with moderate deviation"]
-            })
-            action = "Inspect power converter cabinet. Verify anemometer calibration and control system event logs."
+                })
+            action_plan = {
+                "immediate": ["Verify anemometer calibration.", "Check control system event logs for fault codes."],
+                "inspect": ["Inspect power converter cabinet.", "Check IGBT temperature sensors."],
+                "long_term": ["Update control logic firmware if sensor noise is persistent."]
+            }
 
     if not ranked_conditions:
         ranked_conditions = [{
@@ -226,7 +263,11 @@ def classify_fault(row, status):
             "confidence": None,
             "evidence": [f"Deviation: {dev_pct:.1f}%. More data required for reliable diagnosis."]
         }]
-        action = "Monitor closely. Collect additional readings before dispatching technician."
+        action_plan = {
+            "immediate": ["Monitor closely."],
+            "inspect": ["Collect additional readings"],
+            "long_term": ["Review trend data over next 24 hours"]
+        }
 
     primary = ranked_conditions[0]
-    return primary["condition_name"], primary["confidence"], ranked_conditions, action
+    return primary["condition_name"], primary["confidence"], ranked_conditions, action_plan

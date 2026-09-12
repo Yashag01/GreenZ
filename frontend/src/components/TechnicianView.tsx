@@ -136,11 +136,11 @@ export default function TechnicianView() {
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                   <div className="bg-white/5 p-3 rounded-lg border border-white/5">
-                    <p className="text-flux-sage/60 text-[10px] font-bold uppercase tracking-wider">Failure Risk</p>
-                    <p className="font-mono text-xl text-white mt-1">{a.failure_risk.toFixed(1)}%</p>
+                    <p className="text-flux-sage/60 text-[10px] font-bold uppercase tracking-wider">Risk Score</p>
+                    <p className="font-mono text-xl text-white mt-1">{a.failure_risk.toFixed(1)}</p>
                   </div>
                   <div className="bg-white/5 p-3 rounded-lg border border-white/5">
-                    <p className="text-flux-sage/60 text-[10px] font-bold uppercase tracking-wider">Rev at Risk</p>
+                    <p className="text-flux-sage/60 text-[10px] font-bold uppercase tracking-wider">Est. Financial Loss</p>
                     <p className="font-mono text-xl text-rose-400 mt-1">₹{a.revenue_at_risk.toLocaleString()}</p>
                   </div>
                   <div className="bg-white/5 p-3 rounded-lg border border-white/5 sm:col-span-2">

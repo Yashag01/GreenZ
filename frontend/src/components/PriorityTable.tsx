@@ -10,7 +10,7 @@ interface Props {
 
 export default function PriorityTable({ assets, onSelect }: Props) {
   const handleExport = () => {
-    const headers = ['Rank', 'Asset ID', 'Type', 'Status', 'Risk Score', 'Likely Condition', 'Energy at Risk (kWh)', 'Revenue Impact (Illustrative)', 'Priority Score'];
+    const headers = ['Rank', 'Asset ID', 'Type', 'Status', 'Risk Score', 'Likely Condition', 'Energy at Risk (kWh)', 'Est. Financial Loss', 'Priority Score'];
     const rows = assets.map(a => [
       a.priority_rank,
       a.id,
@@ -62,10 +62,10 @@ export default function PriorityTable({ assets, onSelect }: Props) {
               <th className="py-4 px-4">Asset</th>
               <th className="py-4 px-4">Type</th>
               <th className="py-4 px-4">Status</th>
-              <th className="py-4 px-4 text-right">Risk %</th>
+              <th className="py-4 px-4 text-right">Risk Score</th>
               <th className="py-4 px-4">Likely Fault</th>
-              <th className="py-4 px-4 text-right">₹ at Risk</th>
-              <th className="py-4 px-4 text-right">Score</th>
+              <th className="py-4 px-4 text-right">Est. Loss (₹)</th>
+              <th className="py-4 px-4 text-right">Priority</th>
               <th className="py-4 px-6"></th>
             </tr>
           </thead>

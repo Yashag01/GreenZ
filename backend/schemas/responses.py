@@ -29,12 +29,18 @@ class AssetSummary(BaseModel):
     expected_power: Optional[float] = None
     deviation_pct: Optional[float] = None
     actual_power: Optional[float] = None
+    ae_status: Optional[str] = None
+    root_cause_feature: Optional[str] = None
+    ae_anomaly_score: Optional[float] = None
 
 
 class AssetDetail(AssetSummary):
     model_status: str
     capacity_kw: float
     reasons: List[str]
+    action_immediate: List[str] = []
+    action_inspect: List[str] = []
+    action_long_term: List[str] = []
     fault_confidence: Optional[str] = None  # Evidence strength label, not a probability
 
 

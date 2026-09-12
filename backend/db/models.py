@@ -23,6 +23,13 @@ class AssetHealth(Base):
     priority_score = Column(Float, default=0.0)
     priority_rank = Column(Integer, default=999)
     model_status = Column(String, default="untrained")
+    
+    # Detailed AIZAR-style business features (stored as JSON strings)
+    flag_reasons = Column(String, default="[]") 
+    action_immediate = Column(String, default="[]")
+    action_inspect = Column(String, default="[]")
+    action_long_term = Column(String, default="[]")
+    
     last_updated = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class Alert(Base):

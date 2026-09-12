@@ -7,9 +7,10 @@ import PriorityTable from './components/PriorityTable';
 import AssetDetailPanel from './components/AssetDetailPanel';
 import DemoControls from './components/DemoControls';
 import AlertsList from './components/AlertsList';
+import SystemHealthTab from './components/SystemHealthTab';
 import { supabase } from './api/supabase';
 import { useNavigate, Link } from 'react-router-dom';
-import { LogOut, Wrench } from 'lucide-react';
+import { LogOut, Wrench, Shield, Users } from 'lucide-react';
 
 const queryClient = new QueryClient();
 
@@ -17,6 +18,8 @@ function MainDashboard() {
   const [assets, setAssets] = useState<AssetSummary[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string>('');
+  const [filterType, setFilterType] = useState<'all' | 'solar' | 'wind'>('all');
+  const [viewMode, setViewMode] = useState<'fleet' | 'health'>('fleet');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -70,6 +73,8 @@ function MainDashboard() {
     navigate('/login');
   };
 
+  const filteredAssets = assets.filter(a => filterType === 'all' || a.type === filterType);
+
   return (
     <div className="min-h-screen bg-flux-grid-dark bg-[#f8f9fa] flex flex-col">
       <header className="bg-white border-b border-flux-charcoal/10 px-6 py-4 flex justify-between items-center shadow-sm relative z-20">
@@ -87,6 +92,12 @@ function MainDashboard() {
           <DemoControls />
           
           <div className="flex items-center gap-4 pl-6 border-l border-flux-charcoal/10">
+            <Link to="/docs" className="text-xs font-bold uppercase tracking-wider text-flux-charcoal hover:text-flux-yellow transition-colors flex items-center gap-2">
+              <Shield size={16} /> Trust & Docs
+            </Link>
+            <Link to="/profile" className="text-xs font-bold uppercase tracking-wider text-flux-charcoal hover:text-flux-yellow transition-colors flex items-center gap-2">
+              <Users size={16} /> Team
+            </Link>
             <Link to="/technician" className="text-xs font-bold uppercase tracking-wider text-flux-charcoal hover:text-flux-yellow transition-colors flex items-center gap-2 mr-2">
               <Wrench size={16} /> Tech View
             </Link>
@@ -105,16 +116,59 @@ function MainDashboard() {
       </header>
 
       <main className="flex-1 p-6 max-w-[1600px] mx-auto w-full flex flex-col gap-6">
-        <FleetSummary assets={assets} />
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1">
-          <div className="lg:col-span-3 flex flex-col gap-6">
-            <PriorityTable assets={assets} onSelect={setSelectedAsset} />
-          </div>
-          <div className="lg:col-span-1 flex flex-col gap-6">
-            <AlertsList />
-          </div>
+        {/* Filter Tabs */}
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setFilterType('all')}
+            className={`px-6 py-2 rounded-lg font-bold uppercase tracking-wider text-sm transition-colors ${filterType === 'all' ? 'bg-flux-charcoal text-white' : 'bg-white text-flux-charcoal/60 hover:bg-flux-charcoal/5 border border-flux-charcoal/10'}`}
+          >
+            All Assets
+          </button>
+          <button 
+            onClick={() => setFilterType('solar')}
+            className={`px-6 py-2 rounded-lg font-bold uppercase tracking-wider text-sm transition-colors ${filterType === 'solar' ? 'bg-amber-500 text-white' : 'bg-white text-flux-charcoal/60 hover:bg-amber-500/10 border border-flux-charcoal/10'}`}
+          >
+            Solar Inverters
+          </button>
+          <button 
+            onClick={() => setFilterType('wind')}
+            className={`px-6 py-2 rounded-lg font-bold uppercase tracking-wider text-sm transition-colors ${filterType === 'wind' ? 'bg-emerald-500 text-white' : 'bg-white text-flux-charcoal/60 hover:bg-emerald-500/10 border border-flux-charcoal/10'}`}
+          >
+            Wind Turbines
+          </button>
+          
+          <div className="w-px h-6 bg-flux-charcoal/20 mx-2 self-center"></div>
+          
+          <button 
+            onClick={() => setViewMode('fleet')}
+            className={`px-6 py-2 rounded-lg font-bold uppercase tracking-wider text-sm transition-colors ${viewMode === 'fleet' ? 'bg-flux-charcoal text-white' : 'bg-white text-flux-charcoal/60 hover:bg-flux-charcoal/5 border border-flux-charcoal/10'}`}
+          >
+            Asset View
+          </button>
+          <button 
+            onClick={() => setViewMode('health')}
+            className={`px-6 py-2 rounded-lg font-bold uppercase tracking-wider text-sm transition-colors ${viewMode === 'health' ? 'bg-indigo-600 text-white' : 'bg-white text-flux-charcoal/60 hover:bg-indigo-600/10 border border-flux-charcoal/10'}`}
+          >
+            Alert Grouping
+          </button>
         </div>
+
+        <FleetSummary assets={filteredAssets} />
+
+        {viewMode === 'fleet' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1">
+            <div className="lg:col-span-3 flex flex-col gap-6">
+              <PriorityTable assets={filteredAssets} onSelect={setSelectedAsset} />
+            </div>
+            <div className="lg:col-span-1 flex flex-col gap-6">
+              <AlertsList />
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 bg-white p-6 rounded-xl border border-flux-charcoal/10 shadow-sm">
+            <SystemHealthTab assets={filteredAssets} onSelectAsset={setSelectedAsset} />
+          </div>
+        )}
       </main>
       
       {selectedAsset && (
