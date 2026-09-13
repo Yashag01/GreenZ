@@ -51,7 +51,7 @@ const TrendMetric = ({ label, value, prevValue, unit, isInverseBad = false, form
   }
 
   const formatValue = (v: number) => {
-    if (format === "currency") return `${v.toLocaleString('en-US')}`;
+    if (format === "currency") return `₹${v.toLocaleString('en-US')}`;
     if (format === "percent") return `${v.toFixed(1)}%`;
     return v.toFixed(0);
   };
@@ -59,7 +59,7 @@ const TrendMetric = ({ label, value, prevValue, unit, isInverseBad = false, form
   const formatDelta = (d: number) => {
     if (d === 0) return "";
     const sign = d > 0 ? "+" : "";
-    if (format === "currency") return `${sign}${Math.abs(d).toLocaleString('en-US')}`;
+    if (format === "currency") return `${sign}₹${Math.abs(d).toLocaleString('en-US')}`;
     if (format === "percent") return `${sign}${d.toFixed(1)}%`;
     return `${sign}${d.toFixed(0)}`;
   };
@@ -332,7 +332,7 @@ export default function AssetDetailPanel({ assetId, onClose }: { assetId: string
               </p>
               <p className="text-flux-sage/80 text-sm mt-4">Financial exposure per day</p>
               <p className="text-4xl font-anton tracking-wide text-rose-400">
-                {asset.revenue_at_risk?.toLocaleString("en-US")}
+                ₹{asset.revenue_at_risk?.toLocaleString("en-US")}
               </p>
             </div>
           </div>

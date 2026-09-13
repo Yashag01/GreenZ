@@ -139,7 +139,7 @@ export default function TechnicianView() {
                   </div>
                   <div className="bg-white/5 p-3 rounded-lg border border-white/5">
                     <p className="text-flux-sage/60 text-[10px] font-bold uppercase tracking-wider">Est. Financial Loss</p>
-                    <p className="font-mono text-xl text-rose-400 mt-1">{a.revenue_at_risk.toLocaleString()}</p>
+                    <p className="font-mono text-xl text-rose-400 mt-1">₹{a.revenue_at_risk.toLocaleString()}</p>
                   </div>
                   <div className="bg-white/5 p-3 rounded-lg border border-white/5 sm:col-span-2">
                     <p className="text-flux-sage/60 text-[10px] font-bold uppercase tracking-wider">Top Diagnostic Condition</p>

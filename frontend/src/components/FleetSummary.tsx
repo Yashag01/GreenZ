@@ -53,7 +53,7 @@ export default function FleetSummary({ assets }: { assets: AssetSummary[] }) {
         </div>
         <div>
           <p className="text-xs text-flux-charcoal/60 font-bold uppercase tracking-wider">Est. Financial Loss</p>
-          <p className="font-anton text-3xl text-rose-600 mt-1">{totalRev.toLocaleString()} <span className="text-sm font-sans tracking-normal">/ day</span></p>
+          <p className="font-anton text-3xl text-rose-600 mt-1">₹{totalRev.toLocaleString()} <span className="text-sm font-sans tracking-normal">/ day</span></p>
           <p className="text-xs font-mono text-flux-charcoal/50 mt-1">{totalEnergy.toLocaleString()} kWh est. energy loss</p>
         </div>
       </div>
@@ -64,7 +64,7 @@ export default function FleetSummary({ assets }: { assets: AssetSummary[] }) {
         </div>
         <div>
           <p className="text-xs text-white/80 font-bold uppercase tracking-wider">Estimated Savings</p>
-          <p className="font-anton text-3xl text-white mt-1">{savings.toLocaleString()}</p>
+          <p className="font-anton text-3xl text-white mt-1">₹{savings.toLocaleString()}</p>
           <p className="text-xs font-bold text-white/80 mt-1">{downtime} hrs downtime avoided</p>
         </div>
       </div>
