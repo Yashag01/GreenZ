@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { X, Target, Wrench, AlertTriangle, Activity, ChevronRight, CheckCircle2, Sparkles, Edit2, Trash2, Save, Send, Mail, Smartphone } from 'lucide-react';
+import { X, Target, Wrench, AlertTriangle, Activity, ChevronRight, CheckCircle2, Edit2, Trash2, Save, Send, Mail, Smartphone } from 'lucide-react';
 import type { AssetDetail, HistoryPoint } from '../types/api';
 import { fetchAssetDetail, fetchAssetHistory, updateAsset, deleteAsset } from '../api/client';
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
@@ -11,7 +11,6 @@ interface TeamMember {
   phone: string;
 }
 
-// Helper component for animated number with trend
 const DonutGauge = ({ value }: { value: number }) => {
   const radius = 35;
   const circumference = 2 * Math.PI * radius;
@@ -40,7 +39,6 @@ const TrendMetric = ({ label, value, prevValue, unit, isInverseBad = false, form
   const isUp = delta > 0;
   const isDown = delta < 0;
   
-  // Logic for what color is "good" or "bad"
   let colorClass = "text-white/60";
   let arrow = null;
   
@@ -53,7 +51,7 @@ const TrendMetric = ({ label, value, prevValue, unit, isInverseBad = false, form
   }
 
   const formatValue = (v: number) => {
-    if (format === "currency") return `₹${v.toLocaleString('en-IN')}`;
+    if (format === "currency") return `${v.toLocaleString('en-US')}`;
     if (format === "percent") return `${v.toFixed(1)}%`;
     return v.toFixed(0);
   };
@@ -61,7 +59,7 @@ const TrendMetric = ({ label, value, prevValue, unit, isInverseBad = false, form
   const formatDelta = (d: number) => {
     if (d === 0) return "";
     const sign = d > 0 ? "+" : "";
-    if (format === "currency") return `${sign}₹${Math.abs(d).toLocaleString('en-IN')}`;
+    if (format === "currency") return `${sign}${Math.abs(d).toLocaleString('en-US')}`;
     if (format === "percent") return `${sign}${d.toFixed(1)}%`;
     return `${sign}${d.toFixed(0)}`;
   };
@@ -176,7 +174,6 @@ export default function AssetDetailPanel({ assetId, onClose }: { assetId: string
     const tech = teamMembers[selectedTechIndex];
     if (!tech.phone) return alert('No phone number for ' + tech.name);
     
-    // clean phone
     let phone = tech.phone.replace(/[^0-9]/g, '');
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(generateMessage())}`;
     window.open(url, '_blank');
@@ -201,7 +198,7 @@ export default function AssetDetailPanel({ assetId, onClose }: { assetId: string
     <div className="fixed inset-0 z-50 flex justify-end bg-flux-charcoal/80 backdrop-blur-sm">
       <div className="w-full max-w-[900px] bg-flux-dark h-full shadow-2xl border-l-4 border-flux-yellow flex flex-col animate-in slide-in-from-right duration-300">
         
-        {/* Header */}
+        {}
         <div className="flex justify-between items-center p-6 border-b border-white/10 bg-flux-charcoal relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-flux-yellow/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
           <div className="relative z-10 w-1/2">
@@ -251,7 +248,7 @@ export default function AssetDetailPanel({ assetId, onClose }: { assetId: string
 
         <div className="p-6 overflow-y-auto flex-1 flex flex-col gap-6 bg-flux-grid-dark relative">
           
-          {/* Market-Style Live KPIs */}
+          {}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 relative z-10">
             <TrendMetric 
               label="Actual Power" 
@@ -283,7 +280,7 @@ export default function AssetDetailPanel({ assetId, onClose }: { assetId: string
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
-            {/* Predictive Maintenance & Health */}
+            {}
             <div className="bg-flux-charcoal p-6 rounded-2xl border border-white/10 shadow-xl flex flex-col justify-center items-center relative z-10">
                <h3 className="font-bold uppercase tracking-wider text-flux-sage mb-6 text-xs w-full text-left flex items-center gap-2">
                  <Target size={16} className="text-flux-yellow"/> Predictive Maintenance
@@ -292,7 +289,7 @@ export default function AssetDetailPanel({ assetId, onClose }: { assetId: string
                <p className="text-white font-bold mt-4">Risk Score</p>
                <p className="text-xs text-flux-sage/60 mt-1 uppercase tracking-widest">{isHealthy ? 'Normal' : 'High Risk'}</p>
             </div>
-            {/* Top Diagnostic Condition */}
+            {}
             <div className="bg-flux-charcoal p-6 rounded-2xl border border-white/10 shadow-xl flex flex-col justify-center col-span-1 md:col-span-2">
               <div className="text-xs font-bold uppercase tracking-wider text-flux-sage flex items-center gap-2 mb-3"><Target size={16} className="text-flux-yellow"/> Likely Condition</div>
               <div className="font-anton text-3xl text-white uppercase">
@@ -307,7 +304,7 @@ export default function AssetDetailPanel({ assetId, onClose }: { assetId: string
               )}
             </div>
 
-            {/* Why panel + Financial impact (AIZAR Style) */}
+            { }
             <div className="bg-flux-charcoal p-6 rounded-2xl border border-white/10 shadow-xl flex flex-col relative z-10">
               <h3 className="font-bold uppercase tracking-wider text-flux-sage mb-4 text-xs flex items-center gap-2">
                 <AlertTriangle size={16} className="text-flux-yellow"/> Why is this flagged?
@@ -335,7 +332,7 @@ export default function AssetDetailPanel({ assetId, onClose }: { assetId: string
               </p>
               <p className="text-flux-sage/80 text-sm mt-4">Financial exposure per day</p>
               <p className="text-4xl font-anton tracking-wide text-rose-400">
-                ₹{asset.revenue_at_risk?.toLocaleString("en-IN")}
+                {asset.revenue_at_risk?.toLocaleString("en-US")}
               </p>
             </div>
           </div>
@@ -399,7 +396,7 @@ export default function AssetDetailPanel({ assetId, onClose }: { assetId: string
             </div>
           </div>
 
-          {/* AIZAR-style Environmental / Temp Charts */}
+          {}
           <div className="panel-dark flex-1 min-h-[300px] relative z-10 mt-6">
             <h3 className="font-bold uppercase tracking-wider text-flux-sage text-xs mb-4">
                Physical & Environmental Telemetry
@@ -421,7 +418,7 @@ export default function AssetDetailPanel({ assetId, onClose }: { assetId: string
                     labelFormatter={(l: any) => new Date(l).toLocaleString()}
                     itemStyle={{ fontFamily: 'monospace' }}
                   />
-                  {asset.type === 'solar' ? (
+                  {(asset as any).type === 'solar' ? (
                     <>
                       <Area type="monotone" dataKey="irradiance_wm2" stroke="#f59e0b" fill="none" strokeWidth={2} name="Irradiance (W/m²)" isAnimationActive={false} />
                       <Area type="monotone" dataKey="module_temp_c" stroke="#ef4444" fill="none" strokeWidth={2} name="Module Temp (°C)" isAnimationActive={false} />
@@ -439,7 +436,7 @@ export default function AssetDetailPanel({ assetId, onClose }: { assetId: string
             </div>
           </div>
           
-          {/* AIZAR-style Detailed Action Plan */}
+          {}
           <div className={`p-6 rounded-2xl flex flex-col gap-4 relative z-10 shadow-xl ${isHealthy ? 'bg-flux-charcoal border-2 border-flux-sage/20 text-white' : 'bg-flux-yellow text-flux-charcoal border-2 border-flux-yellow shadow-flux-yellow/10'}`}>
             <div className="flex items-start gap-4 mb-2">
               <Wrench className="mt-1" size={24} />
@@ -457,7 +454,7 @@ export default function AssetDetailPanel({ assetId, onClose }: { assetId: string
               </div>
             ) : (
               <div className="space-y-4">
-                {/* Immediate */}
+                {}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <span className="w-2 h-2 rounded-full bg-rose-500" />
@@ -475,7 +472,7 @@ export default function AssetDetailPanel({ assetId, onClose }: { assetId: string
                   </ul>
                 </div>
 
-                {/* Inspect */}
+                {}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <span className="w-2 h-2 rounded-full bg-orange-500" />
@@ -493,7 +490,7 @@ export default function AssetDetailPanel({ assetId, onClose }: { assetId: string
                   </ul>
                 </div>
 
-                {/* Follow up */}
+                {}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <span className="w-2 h-2 rounded-full bg-blue-600" />
@@ -514,7 +511,7 @@ export default function AssetDetailPanel({ assetId, onClose }: { assetId: string
             )}
           </div>
           
-          {/* Work Order Dispatch */}
+          {}
           {!isHealthy && (
             <div className="bg-gradient-to-r from-flux-charcoal to-flux-dark p-6 rounded-2xl border border-white/10 shadow-xl relative z-10 flex flex-col gap-4">
               <div className="flex items-center gap-3 mb-2">

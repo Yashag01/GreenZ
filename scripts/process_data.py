@@ -22,17 +22,13 @@ def process_kaggle_solar():
     df_gen = pd.read_csv(gen_file)
     df_weather = pd.read_csv(weather_file)
     
-    # Fix dates
     df_gen['DATE_TIME'] = pd.to_datetime(df_gen['DATE_TIME'], format='%d-%m-%Y %H:%M')
     df_weather['DATE_TIME'] = pd.to_datetime(df_weather['DATE_TIME'], format='%Y-%m-%d %H:%M:%S')
     
-    # Drop irrelevant columns
     df_weather = df_weather[['DATE_TIME', 'PLANT_ID', 'AMBIENT_TEMPERATURE', 'MODULE_TEMPERATURE', 'IRRADIATION']]
     
-    # Merge on timestamp and plant id
     df = pd.merge(df_gen, df_weather, on=['DATE_TIME', 'PLANT_ID'], how='inner')
     
-    # Map columns to canonical names
     df = df.rename(columns={
         'DATE_TIME': 'timestamp',
         'SOURCE_KEY': 'asset_id', # Each inverter is an asset
@@ -42,14 +38,11 @@ def process_kaggle_solar():
         'IRRADIATION': 'irradiance_wm2'
     })
     
-    # Keep canonical columns + any others
     cols_to_keep = ['timestamp', 'asset_id', 'actual_power', 'ambient_temp_c', 'module_temp_c', 'irradiance_wm2', 'DC_POWER']
     df = df[cols_to_keep]
     
-    # Sort and clean
     df = df.sort_values(['asset_id', 'timestamp'])
     
-    # Downsample if needed or keep as 15 min. (It's already 15 min)
     
     out_path = os.path.join(PROCESSED_DIR, "solar_clean.csv")
     df.to_csv(out_path, index=False)
@@ -67,19 +60,15 @@ def generate_demo_wind(num_assets=5, days=7):
     for i in range(1, num_assets + 1):
         asset_id = f"WTG-{i:03d}"
         
-        # Base wind speed follows diurnal pattern + noise
         hours = timestamps.hour + timestamps.minute / 60.0
-        # Wind is often higher at night/early morning, but let's make a simple curve
         base_wind = 6.0 + 3.0 * np.sin(np.pi * hours / 12.0) + np.random.normal(0, 1.5, len(timestamps))
         base_wind = np.clip(base_wind, 0, 25) # Cut-in ~3, Cut-out ~25
         
-        # Power curve: cubic until rated, then flat
         rated_speed = 12.0
         actual_power = np.where(base_wind < 3.0, 0,
                         np.where(base_wind > 25.0, 0,
                           np.where(base_wind < rated_speed, 2000 * (base_wind/rated_speed)**3, 2000)))
         
-        # Add noise to power
         actual_power = actual_power + np.random.normal(0, 50, len(actual_power))
         actual_power = np.clip(actual_power, 0, 2000)
         

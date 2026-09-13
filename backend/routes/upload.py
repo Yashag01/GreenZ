@@ -43,7 +43,6 @@ async def upload_csv(files: List[UploadFile] = File(...), db: Session = Depends(
         
         affected_assets = merged_df["asset_id"].unique()
         
-        # Add new assets to database if they don't exist
         existing = {a.id for a in db.query(Asset).filter(Asset.id.in_(affected_assets)).all()}
         for asset_id in affected_assets:
             if asset_id not in existing:

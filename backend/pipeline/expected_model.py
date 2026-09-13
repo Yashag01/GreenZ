@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 MODELS_DIR = "models"
 os.makedirs(MODELS_DIR, exist_ok=True)
 
-# Full CSV paths — used when training from scratch to avoid 96-row window problem
 PROCESSED_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "processed")
 
 
@@ -36,7 +35,6 @@ def train_or_load_model(asset_id, df_asset):
     if not features:
         return None, "fallback_rule_based"
 
-    # Load cached model
     if os.path.exists(model_path):
         try:
             model = joblib.load(model_path)
@@ -45,7 +43,6 @@ def train_or_load_model(asset_id, df_asset):
         except Exception:
             pass
 
-    # Train on FULL historical data to avoid nighttime-only window problem
     full_df = _load_full_asset_data(asset_id, is_solar)
     if full_df is not None and len(full_df) >= 100:
         df_train = full_df
@@ -55,7 +52,6 @@ def train_or_load_model(asset_id, df_asset):
     available_features = [f for f in features if f in df_train.columns]
     df_train = df_train.dropna(subset=available_features + ["actual_power"])
 
-    # For solar: only train on rows with meaningful irradiance to avoid nighttime noise
     if is_solar and "irradiance_wm2" in df_train.columns:
         df_train = df_train[df_train["irradiance_wm2"] > 0.05]
 
@@ -108,20 +104,17 @@ def compute_expected_power(asset_id, df_asset, capacity_kw=None):
     available = [f for f in features if f in df_asset.columns]
     
     if model and len(available) == model.n_features_in_:
-        # Find rows without NaNs in the required features
         valid_mask = df_asset[available].notna().all(axis=1)
         if valid_mask.any():
             X = df_asset.loc[valid_mask, available]
             preds = model.predict(X)
             
-            # For solar at night (very low irradiance), expected = 0
             if is_solar and "irradiance_wm2" in df_asset.columns:
                 night_mask = df_asset.loc[valid_mask, "irradiance_wm2"] < 0.05
                 preds[night_mask] = 0.0
                 
             expected_power.loc[valid_mask] = np.maximum(0.0, preds)
             
-    # Fallback for missing/NaN rows
     missing_mask = expected_power.isna()
     if missing_mask.any():
         fallback_preds = df_asset.loc[missing_mask].apply(
@@ -144,7 +137,6 @@ def _rule_based_expected(row, is_solar, capacity_kw, df_asset):
         if pd.isna(cap) or cap <= 0:
             cap = 50.0  # default minimum capacity to avoid 0 baseline
             
-        # irradiance is normalized 0-1.2 range; scale linearly
         return max(0.0, cap * min(irr / 1.0, 1.0))
     else:
         speed = float(row.get("wind_speed_ms", 0) or 0)
@@ -152,8 +144,6 @@ def _rule_based_expected(row, is_solar, capacity_kw, df_asset):
         if pd.isna(cap) or cap <= 0:
             cap = 2000.0
             
-        # Realistic power curve representation (normalized to 1.0 at rated capacity)
-        # Represents standard aerodynamic efficiencies and pitch-control limits.
         wind_speeds = np.array([0.0, 2.5, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 25.0, 25.1])
         power_coeffs = np.array([0.0, 0.0, 0.02, 0.07, 0.15, 0.26, 0.40, 0.58, 0.77, 0.90, 0.97, 0.99, 1.0, 1.0, 0.0])
         

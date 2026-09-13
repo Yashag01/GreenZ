@@ -12,7 +12,6 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // DEMO BYPASS
     if (email.toLowerCase() === 'demo@gmail.com') {
       localStorage.setItem('demo_bypass', 'true');
       navigate('/dashboard');
@@ -58,7 +57,6 @@ export default function Login() {
       setError(error.message);
     } else {
       if (data.user) {
-        // Initialize empty profile
         await supabase.from('profiles').upsert({
           id: data.user.id,
           name: email.split('@')[0],
@@ -74,12 +72,13 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-flux-grid-dark bg-[#f8f9fa] p-4">
       <div className="max-w-md w-full bg-white border border-flux-charcoal/10 p-10 shadow-2xl relative overflow-hidden">
         
-        {/* Decorative corner */}
+        {}
         <div className="absolute -top-12 -right-12 w-24 h-24 bg-flux-yellow rotate-45 border-b border-flux-charcoal/10"></div>
 
         <div className="flex justify-center mb-6">
-          <h1 className="font-anton text-5xl uppercase tracking-wide text-flux-charcoal">
-            Flux<span className="text-flux-yellow">.</span>
+          <h1 className="font-anton text-5xl uppercase tracking-wide text-flux-charcoal flex items-center">
+            <img src="/logo.png" alt="GreenZ Logo" className="h-12 w-12 mr-3 object-contain" />
+            Green<span className="text-flux-yellow">Z</span>
           </h1>
         </div>
         

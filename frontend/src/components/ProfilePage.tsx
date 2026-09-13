@@ -18,7 +18,6 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const loadProfile = async () => {
-      // Allow demo bypass
       if (localStorage.getItem('demo_bypass') === 'true') {
         setProfileName('Demo Manager');
         setTeamMembers([
@@ -102,7 +101,7 @@ export default function ProfilePage() {
 
       <main className="flex-1 p-6 max-w-4xl mx-auto w-full flex flex-col gap-8 mt-8">
         
-        {/* Company Profile Section */}
+        {}
         <section className="bg-white p-8 border border-flux-charcoal/10 shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-flux-yellow/10 rounded-full blur-3xl pointer-events-none"></div>
           <h2 className="font-anton text-3xl uppercase tracking-wide text-flux-charcoal mb-6 flex items-center gap-3">
@@ -120,7 +119,7 @@ export default function ProfilePage() {
           </div>
         </section>
 
-        {/* Team Members Section */}
+        {}
         <section className="bg-white p-8 border border-flux-charcoal/10 shadow-xl relative overflow-hidden">
           <div className="flex justify-between items-end mb-8 relative z-10">
             <h2 className="font-anton text-3xl uppercase tracking-wide text-flux-charcoal flex items-center gap-3">

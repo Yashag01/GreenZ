@@ -4,7 +4,6 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Manual initialization for tests
 from db.session import engine, Base, SessionLocal
 from db.seed import seed_database
 from cache.analytics_store import store
@@ -35,7 +34,6 @@ def test_health():
 def test_get_assets():
     response = client.get("/api/assets")
     assert response.status_code == 200
-    # There should be assets seeded
     assets = response.json()
     assert isinstance(assets, list)
 
@@ -45,7 +43,6 @@ def test_get_priority_list():
     assets = response.json()
     assert isinstance(assets, list)
     if assets:
-        # Check if sorted
         assert assets[0]["priority_score"] >= assets[-1]["priority_score"]
 
 def test_get_alerts():

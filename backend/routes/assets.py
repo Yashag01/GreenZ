@@ -34,7 +34,6 @@ def _ranked_conditions_from_row(last_row):
             ranked_conds = []
     if not isinstance(ranked_conds, list):
         ranked_conds = []
-    # Ensure each entry has expected fields
     validated = []
     for c in ranked_conds:
         if isinstance(c, dict) and "condition_name" in c:
@@ -78,7 +77,6 @@ def get_assets(db: Session = Depends(get_db)):
             }
             results.append(summary)
 
-    # Sort by priority score descending
     results.sort(key=lambda x: x["priority_score"], reverse=True)
     for i, res in enumerate(results):
         res["priority_rank"] = i + 1
@@ -116,7 +114,6 @@ def get_asset(asset_id: str, db: Session = Depends(get_db)):
     action_inspect = _parse_json_list(last_row.get("action_inspect"))
     action_long_term = _parse_json_list(last_row.get("action_long_term"))
 
-    # Handle NaN confidence values
     fault_conf_raw = last_row.get("fault_confidence")
     fault_conf = None if (fault_conf_raw is None or (isinstance(fault_conf_raw, float) and pd.isna(fault_conf_raw))) else str(fault_conf_raw)
 
@@ -154,10 +151,8 @@ def get_asset_history(asset_id: str):
     if df is None or df.empty:
         raise HTTPException(status_code=404, detail="Asset data not found")
 
-    # Return last 96 rows (24h at 15-min intervals)
     df_tail = df.tail(96).copy()
 
-    # Sanitize non-serializable columns
     for col in df_tail.columns:
         if df_tail[col].dtype == object:
             df_tail[col] = df_tail[col].astype(str)

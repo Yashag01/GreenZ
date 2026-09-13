@@ -24,7 +24,6 @@ class AssetHealth(Base):
     priority_rank = Column(Integer, default=999)
     model_status = Column(String, default="untrained")
     
-    # Detailed AIZAR-style business features (stored as JSON strings)
     flag_reasons = Column(String, default="[]") 
     action_immediate = Column(String, default="[]")
     action_inspect = Column(String, default="[]")

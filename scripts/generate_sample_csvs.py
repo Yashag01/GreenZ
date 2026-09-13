@@ -6,10 +6,8 @@ from datetime import datetime, timedelta
 def generate_solar_data(asset_id, start_date, num_rows):
     timestamps = [start_date + timedelta(minutes=15 * i) for i in range(num_rows)]
     
-    # Base diurnal cycle (sun is up from 6 AM to 6 PM roughly)
     hours = np.array([t.hour + t.minute / 60.0 for t in timestamps])
     
-    # Irradiance model (bell curve around noon)
     irradiance = np.where(
         (hours >= 6) & (hours <= 18),
         800 * np.sin(np.pi * (hours - 6) / 12) + np.random.normal(0, 50, num_rows),
@@ -17,16 +15,11 @@ def generate_solar_data(asset_id, start_date, num_rows):
     )
     irradiance = np.clip(irradiance, 0, 1200)
     
-    # Temperature (lags irradiance slightly)
     ambient_temp = 20 + 10 * np.sin(np.pi * (hours - 8) / 12) + np.random.normal(0, 2, num_rows)
     ambient_temp = np.clip(ambient_temp, 10, 45)
     
-    # Module temp is ambient + heating from irradiance
     module_temp = ambient_temp + (irradiance / 800) * 20 + np.random.normal(0, 1, num_rows)
     
-    # Power generation (approx linear to irradiance with temperature derating)
-    # P = A * r * H * PR
-    # Simplified: nominal 2000 kW capacity
     capacity_kw = 2000
     temp_derating = 1 - 0.004 * (module_temp - 25) # 0.4% loss per degree above 25C
     actual_power = capacity_kw * (irradiance / 1000) * temp_derating + np.random.normal(0, 10, num_rows)
@@ -47,16 +40,12 @@ def generate_solar_data(asset_id, start_date, num_rows):
 def generate_wind_data(asset_id, start_date, num_rows):
     timestamps = [start_date + timedelta(minutes=15 * i) for i in range(num_rows)]
     
-    # Wind speed (Weibull distribution approximation + some autocorrelation)
     wind_speed = np.zeros(num_rows)
     wind_speed[0] = np.random.weibull(2) * 8
     for i in range(1, num_rows):
-        # random walk with mean reversion to 8 m/s
         wind_speed[i] = wind_speed[i-1] * 0.9 + np.random.normal(0.8, 1.5)
     wind_speed = np.clip(wind_speed, 0, 25)
     
-    # Power curve (simplified)
-    # Cut in: 3 m/s, Rated: 12 m/s, Cut out: 25 m/s
     capacity_kw = 3000
     actual_power = np.zeros(num_rows)
     for i, ws in enumerate(wind_speed):
@@ -65,18 +54,14 @@ def generate_wind_data(asset_id, start_date, num_rows):
         elif ws >= 12:
             actual_power[i] = capacity_kw
         else:
-            # cubic relationship below rated speed
             actual_power[i] = capacity_kw * ((ws - 3) / (12 - 3))**3
             
-    # add some noise
     actual_power += np.random.normal(0, capacity_kw * 0.02, num_rows)
     actual_power = np.clip(actual_power, 0, capacity_kw)
     
-    # Temperature and vibration
     hours = np.array([t.hour + t.minute / 60.0 for t in timestamps])
     ambient_temp = 15 + 8 * np.sin(np.pi * (hours - 8) / 12) + np.random.normal(0, 2, num_rows)
     
-    # Vibration (correlates with wind speed and power)
     vibration = 0.5 + 0.1 * wind_speed + 0.0001 * actual_power + np.random.normal(0, 0.1, num_rows)
     vibration = np.clip(vibration, 0.1, 5.0)
     

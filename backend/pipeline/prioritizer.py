@@ -24,22 +24,17 @@ def load_weights():
 def compute_priority(row):
     weights = load_weights()
     
-    # 1. Failure Probability Norm (0-100) -> (0-1)
     f_prob = row.get("failure_risk", 0) / 100.0
     
-    # 2. Revenue Risk Norm (Max out around 50k INR for normalization)
     rev_risk = row.get("revenue_at_risk", 0)
     rev_norm = min(rev_risk / 50000.0, 1.0)
     
-    # 3. Severity Norm
     status = row.get("status", "Normal")
     sev_map = {"Critical": 1.0, "Warning": 0.5, "Normal": 0.0}
     sev_norm = sev_map.get(status, 0.0)
     
-    # 4. Criticality Norm (Assumed 0-1)
     crit_norm = row.get("asset_criticality", 0.5)
     
-    # 5. Persistence Norm (Caps at 10 streaks)
     streak = row.get("consecutive_anomaly_count", 0)
     pers_norm = min(streak / 10.0, 1.0)
     

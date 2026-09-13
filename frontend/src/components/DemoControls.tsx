@@ -5,7 +5,7 @@ import type { PlaybackState } from '../types/api';
 
 export default function DemoControls() {
   const [loading, setLoading] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [showSpeedDropdown, setShowSpeedDropdown] = useState(false);
   const [playbackState, setPlaybackState] = useState<PlaybackState | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -113,18 +113,34 @@ export default function DemoControls() {
 
   return (
     <div className="flex gap-3 relative items-center">
-      {/* SCADA Timeline Display */}
+      {}
       <div className="bg-flux-charcoal border-2 border-white/10 rounded-lg px-4 py-2 flex flex-col justify-center min-w-[200px]">
         <div className="text-[10px] text-flux-sage font-bold uppercase tracking-widest flex items-center gap-1.5">
           <Clock size={10} /> 
-          {playbackState?.is_playing ? 'SIMULATION RUNNING' : 'SIMULATION PAUSED'}
+          <div className="flex items-center gap-1.5">
+            {playbackState?.is_playing ? (
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+            ) : null}
+            {playbackState?.is_playing ? 'SIMULATION RUNNING' : 'SIMULATION PAUSED'}
+          </div>
         </div>
         <div className="text-white font-mono text-sm tracking-wide mt-0.5">
           {formatTimestamp(playbackState?.timestamp)}
         </div>
+        {playbackState?.total_rows && (
+          <div className="mt-1 w-full bg-white/20 rounded-full h-1">
+            <div 
+              className="bg-emerald-500 h-1 rounded-full" 
+              style={{ width: `${(playbackState.cursor / playbackState.total_rows) * 100}%` }}
+            ></div>
+          </div>
+        )}
       </div>
 
-      {/* Play/Pause Button */}
+      {}
       <button 
         disabled={loading}
         onClick={handlePlayPause}
@@ -134,7 +150,7 @@ export default function DemoControls() {
         {playbackState?.is_playing ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-1" />}
       </button>
 
-      {/* Speed Selector */}
+      {}
       <div className="relative">
         <button 
           disabled={loading}
@@ -147,7 +163,7 @@ export default function DemoControls() {
         
         {showSpeedDropdown && (
           <div className="absolute top-full mt-2 left-0 w-32 bg-flux-charcoal border-2 border-flux-yellow rounded-xl shadow-2xl overflow-hidden z-50">
-            {[1, 10, 50, 100, 250].map((s) => (
+            {[75, 100, 250, 500].map((s) => (
               <button 
                 key={s}
                 onClick={() => handleSpeedChange(s)}
@@ -162,7 +178,7 @@ export default function DemoControls() {
 
       <div className="w-px h-8 bg-white/20 mx-1"></div>
 
-      {/* Reset & Upload */}
+      {}
       <button 
         disabled={loading}
         onClick={handleReset}

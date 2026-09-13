@@ -8,15 +8,11 @@ def compute_deviation_metrics(df, eps=1e-3, rolling_window=12):
     """
     df = df.copy()
     
-    # Deviation Percentage
-    # Formula: (actual - expected) / expected * 100
     df["deviation_pct"] = (df["actual_power"] - df["expected_power"]) / np.maximum(df["expected_power"].abs(), eps) * 100.0
     
-    # AIZAR Logic: power_deviation and rolling_mean_power
     df["rolling_mean_power"] = df["actual_power"].rolling(window=6, min_periods=1).mean()
     df["power_deviation"] = df["actual_power"] - df["rolling_mean_power"]
     
-    # AIZAR Logic: temp_trend
     temp_col = "internal_temp" if "internal_temp" in df.columns else "module_temp_c"
     if temp_col not in df.columns:
         temp_col = "ambient_temp_c" # fallback
@@ -27,11 +23,9 @@ def compute_deviation_metrics(df, eps=1e-3, rolling_window=12):
     else:
         df["temp_trend"] = 0.0
     
-    # We only care about deviation when expected power is somewhat significant.
     mask = df["expected_power"] < (df["actual_power"].max() * 0.05)
     df.loc[mask, "deviation_pct"] = 0.0
     
-    # Rolling metrics
     df["rolling_mean_dev"] = df["deviation_pct"].rolling(window=rolling_window, min_periods=1).mean()
     df["rolling_std_dev"] = df["deviation_pct"].rolling(window=rolling_window, min_periods=1).std().fillna(0)
     

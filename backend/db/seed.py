@@ -22,10 +22,8 @@ def seed_database(db: Session, force=False):
         df_solar = pd.read_csv(solar_path)
         solar_ids = df_solar["asset_id"].unique()
         for i, aid in enumerate(solar_ids):
-            # Try to cap at 15 for demo purposes
-            if i >= 15:
+            if i >= 30:
                 break
-            # Find max power to use as capacity
             cap = df_solar[df_solar["asset_id"] == aid]["actual_power"].max()
             assets.append(Asset(
                 id=aid,
@@ -40,6 +38,8 @@ def seed_database(db: Session, force=False):
         df_wind = pd.read_csv(wind_path)
         wind_ids = df_wind["asset_id"].unique()
         for i, aid in enumerate(wind_ids):
+            if i >= 30:
+                break
             cap = df_wind[df_wind["asset_id"] == aid]["actual_power"].max()
             assets.append(Asset(
                 id=aid,

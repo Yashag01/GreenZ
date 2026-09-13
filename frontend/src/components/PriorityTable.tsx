@@ -30,7 +30,7 @@ export default function PriorityTable({ assets, onSelect }: Props) {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `renewai_priority_report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `GreenZ_priority_report_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -64,7 +64,7 @@ export default function PriorityTable({ assets, onSelect }: Props) {
               <th className="py-4 px-4">Status</th>
               <th className="py-4 px-4 text-right">Risk Score</th>
               <th className="py-4 px-4">Likely Fault</th>
-              <th className="py-4 px-4 text-right">Est. Loss (₹)</th>
+              <th className="py-4 px-4 text-right">Est. Loss</th>
               <th className="py-4 px-4 text-right">Priority</th>
               <th className="py-4 px-6"></th>
             </tr>
@@ -108,7 +108,7 @@ export default function PriorityTable({ assets, onSelect }: Props) {
                 </td>
                 <td className="py-4 px-4 text-right font-mono font-bold">
                   {asset.revenue_at_risk > 0 ? (
-                    <span className="text-rose-600">₹{asset.revenue_at_risk.toLocaleString()}</span>
+                    <span className="text-rose-600">{asset.revenue_at_risk.toLocaleString()}</span>
                   ) : (
                     <span className="text-flux-charcoal/30">-</span>
                   )}

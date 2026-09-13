@@ -12,7 +12,6 @@ export default function TechnicianView() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check Auth
     const checkUser = async () => {
       if (localStorage.getItem('demo_bypass') === 'true') {
         setUserEmail('demo@gmail.com');
@@ -57,12 +56,11 @@ export default function TechnicianView() {
     navigate('/login');
   };
 
-  // Only show assets that need attention
   const actionable = assets.filter(a => a.decision_status === 'Inspect Now' || a.decision_status === 'Schedule Inspection' || a.status === 'Critical' || a.status === 'Warning');
 
   return (
     <div className="min-h-screen bg-flux-grid-dark bg-[#f8f9fa] flex flex-col">
-      {/* Header */}
+      {}
       <header className="bg-white border-b border-flux-charcoal/10 px-6 py-4 flex flex-col md:flex-row justify-between md:items-center shadow-sm relative z-20 gap-4">
         <div className="flex items-baseline gap-4">
           <h1 className="font-anton text-3xl uppercase tracking-wide text-flux-charcoal">
@@ -91,7 +89,7 @@ export default function TechnicianView() {
         </div>
       </header>
 
-      {/* Main Content */}
+      {}
       <main className="flex-1 p-6 max-w-4xl mx-auto w-full flex flex-col gap-6">
         <div className="mb-4">
           <h2 className="font-anton text-4xl uppercase text-flux-charcoal mb-2">Active Work Orders</h2>
@@ -141,7 +139,7 @@ export default function TechnicianView() {
                   </div>
                   <div className="bg-white/5 p-3 rounded-lg border border-white/5">
                     <p className="text-flux-sage/60 text-[10px] font-bold uppercase tracking-wider">Est. Financial Loss</p>
-                    <p className="font-mono text-xl text-rose-400 mt-1">₹{a.revenue_at_risk.toLocaleString()}</p>
+                    <p className="font-mono text-xl text-rose-400 mt-1">{a.revenue_at_risk.toLocaleString()}</p>
                   </div>
                   <div className="bg-white/5 p-3 rounded-lg border border-white/5 sm:col-span-2">
                     <p className="text-flux-sage/60 text-[10px] font-bold uppercase tracking-wider">Top Diagnostic Condition</p>

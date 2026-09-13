@@ -1,7 +1,5 @@
 export interface ConditionLikelihood {
   condition_name: string;
-  // Evidence strength label: "High" | "Moderate" | "Low" | null
-  // NOT a calibrated failure probability
   confidence: string | null;
   evidence: string[];
 }
@@ -61,5 +59,6 @@ export interface PlaybackState {
   is_playing: boolean;
   speed: number;
   cursor: number;
+  total_rows?: number;
   timestamp: string | null;
 }

@@ -43,7 +43,6 @@ def classify_fault(row, status):
         irr = float(irradiance) if irradiance is not None else None
         dc = float(dc_power) if dc_power is not None else None
 
-        # Assess evidence strength
         has_temp_evidence = mod_temp is not None and mod_temp > 65
         has_dc_evidence = dc is not None
         high_dc_relative = dc is not None and dc > 0  # DC input present but AC output low
@@ -54,9 +53,7 @@ def classify_fault(row, status):
         irr_str = f"{irr:.2f}" if irr is not None else "N/A"
         temp_str = f"{mod_temp:.1f}°C" if mod_temp is not None else "N/A"
 
-        # Build evidence-based conditions
         if has_temp_evidence and moderate_dev:
-            # Strong evidence: temperature + power gap
             evidence_notes = [
                 f"Power output below expected ({dev_pct:.1f}%)",
                 f"Module/inverter temperature elevated ({temp_str})",
@@ -91,7 +88,6 @@ def classify_fault(row, status):
             }
 
         elif severe_dev:
-            # Large step-down without clear temperature cause
             evidence_notes = [
                 f"Severe power deficit ({dev_pct:.1f}%) relative to expected",
                 f"Irradiance adequate ({irr_str} p.u.)" if irr else "",
@@ -121,7 +117,6 @@ def classify_fault(row, status):
             }
 
         else:
-            # Moderate deviation — most likely soiling or general underperformance
             evidence_notes = [
                 f"Moderate power deficit ({dev_pct:.1f}%) relative to expected",
                 f"Irradiance: {irr_str} p.u." if irr else "",
@@ -151,7 +146,6 @@ def classify_fault(row, status):
             }
 
     else:
-        # Wind Asset
         vib = row.get("vibration_mm_s")
         speed = row.get("wind_speed_ms")
         temp = row.get("ambient_temp_c")

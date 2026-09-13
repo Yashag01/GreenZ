@@ -5,8 +5,6 @@ from datetime import datetime
 
 class ConditionLikelihood(BaseModel):
     condition_name: str
-    # Evidence strength label: "High", "Moderate", "Low", or None (for normal operation)
-    # These are NOT calibrated failure probabilities.
     confidence: Optional[str] = None
     evidence: List[str] = []
 

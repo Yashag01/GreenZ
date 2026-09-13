@@ -23,7 +23,6 @@ function MainDashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check Auth
     const checkUser = async () => {
       if (localStorage.getItem('demo_bypass') === 'true') {
         setUserEmail('demo@gmail.com');
@@ -53,11 +52,10 @@ function MainDashboard() {
   useEffect(() => {
     loadData();
     
-    // SSE for real-time updates
     const eventSource = new EventSource('http://localhost:8000/api/demo/stream');
     eventSource.onmessage = (event) => {
       console.log("SSE Message:", event.data);
-      if (event.data === "demo_reset" || event.data.startsWith("asset_updated:")) {
+      if (event.data === "demo_reset" || event.data.startsWith("asset_updated:") || event.data.startsWith("asset_deleted:")) {
         loadData();
       }
     };
@@ -78,9 +76,10 @@ function MainDashboard() {
   return (
     <div className="min-h-screen bg-flux-grid-dark bg-[#f8f9fa] flex flex-col">
       <header className="bg-white border-b border-flux-charcoal/10 px-6 py-4 flex justify-between items-center shadow-sm relative z-20">
-        <div className="flex items-baseline gap-4">
-          <h1 className="font-anton text-3xl uppercase tracking-wide text-flux-charcoal">
-            Renew<span className="text-flux-yellow">AI</span>
+        <div className="flex items-center gap-4">
+          <h1 className="font-anton text-3xl uppercase tracking-wide text-flux-charcoal flex items-center">
+            <img src="/logo.png" alt="GreenZ Logo" className="h-8 w-8 mr-2 object-contain" />
+            Green<span className="text-flux-yellow">Z</span>
           </h1>
           <div className="hidden md:block h-6 w-px bg-flux-charcoal/20"></div>
           <span className="hidden md:inline font-bold uppercase tracking-widest text-xs text-flux-charcoal/50">
@@ -92,9 +91,7 @@ function MainDashboard() {
           <DemoControls />
           
           <div className="flex items-center gap-4 pl-6 border-l border-flux-charcoal/10">
-            <Link to="/docs" className="text-xs font-bold uppercase tracking-wider text-flux-charcoal hover:text-flux-yellow transition-colors flex items-center gap-2">
-              <Shield size={16} /> Trust & Docs
-            </Link>
+
             <Link to="/profile" className="text-xs font-bold uppercase tracking-wider text-flux-charcoal hover:text-flux-yellow transition-colors flex items-center gap-2">
               <Users size={16} /> Team
             </Link>
@@ -116,7 +113,7 @@ function MainDashboard() {
       </header>
 
       <main className="flex-1 p-6 max-w-[1600px] mx-auto w-full flex flex-col gap-6">
-        {/* Filter Tabs */}
+        {}
         <div className="flex gap-2">
           <button 
             onClick={() => setFilterType('all')}

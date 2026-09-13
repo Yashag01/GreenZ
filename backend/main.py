@@ -7,7 +7,6 @@ import threading
 import sys
 import os
 
-# Set up path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from db.session import engine, Base, SessionLocal
@@ -19,7 +18,6 @@ from routes import health, assets, alerts, demo, upload
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create DB tables
 Base.metadata.create_all(bind=engine)
 
 def startup_pipeline_task():
@@ -29,16 +27,13 @@ def startup_pipeline_task():
         force_reset = "--reset" in sys.argv or os.environ.get("SEED_FORCE_RESET", "false").lower() == "true"
         seed_database(db, force=force_reset)
         
-        # Load asset IDs from DB
         from db.models import Asset
         assets = db.query(Asset).all()
         asset_ids = [a.id for a in assets]
         
-        # Load Raw Data into cache
         logger.info("Loading raw data into cache...")
         store.load_from_disk(asset_ids)
         
-        # Process baseline
         logger.info("Running baseline analytics pipeline...")
         for aid in asset_ids:
             df_raw = store.get_raw(aid)
@@ -54,11 +49,9 @@ def startup_pipeline_task():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
     thread = threading.Thread(target=startup_pipeline_task)
     thread.start()
     yield
-    # Shutdown
     pass
 
 app = FastAPI(title="Predictive Maintenance API", lifespan=lifespan)

@@ -46,11 +46,6 @@ export const seedDemo = async () => {
   return res.json();
 };
 
-export const seedDemo = async () => {
-  const res = await fetch(`${API_BASE}/demo/seed`, { method: 'POST' });
-  if (!res.ok) throw new Error('Failed to seed demo');
-  return res.json();
-};
 
 export const resolveIssue = async (asset_id: string) => {
   const res = await fetch(`${API_BASE}/demo/resolve/${asset_id}`, { method: 'POST' });

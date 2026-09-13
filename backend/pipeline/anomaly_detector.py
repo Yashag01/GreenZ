@@ -18,7 +18,6 @@ def train_or_load_autoencoder(asset_id, df, features):
     model_path = os.path.join(MODELS_DIR, f"{asset_id}_autoencoder.pkl")
     scaler_path = os.path.join(MODELS_DIR, f"{asset_id}_scaler.pkl")
     
-    # Try to load existing
     if os.path.exists(model_path) and os.path.exists(scaler_path):
         try:
             ae = joblib.load(model_path)
@@ -28,15 +27,10 @@ def train_or_load_autoencoder(asset_id, df, features):
         except Exception:
             pass
 
-    # Filter for 'normal' operating conditions to train the Autoencoder
-    # Normal = strictly positive expected power, and low deviation historically.
     try:
         from cache.analytics_store import store
         if asset_id in store.full_raw_data:
             df_full = store.full_raw_data[asset_id]
-            # Must compute expected power and deviation for the full raw data first?
-            # Actually, full_raw_data might not have expected_power yet. 
-            # So we just train on raw features where available.
             df_for_training = df_full.dropna(subset=features)
         else:
             df_for_training = df.dropna(subset=features)
@@ -53,14 +47,12 @@ def train_or_load_autoencoder(asset_id, df, features):
         df_train = df_for_training
     
     if len(df_train) < 10:
-        # Fallback to all valid rows if we don't have enough 'perfect' normal data
         df_train = df_for_training
 
     X = df_train[features].values
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
-    # Simple undercomplete autoencoder: input -> hidden -> input
     hidden_size = max(2, len(features) // 2)
     ae = MLPRegressor(hidden_layer_sizes=(hidden_size,), activation='relu', solver='adam', max_iter=200, random_state=42)
     ae.fit(X_scaled, X_scaled)
@@ -76,7 +68,6 @@ def detect_anomalies_vectorized(asset_id, df):
     """
     df = df.copy()
     
-    # Defaults
     df["ae_anomaly_score"] = 0.0
     df["root_cause_feature"] = "Unknown"
     df["ae_status"] = "Normal"
@@ -96,28 +87,23 @@ def detect_anomalies_vectorized(asset_id, df):
     if ae is None or scaler is None:
         return df
 
-    # Calculate reconstruction error
     valid_mask = df[features].notna().all(axis=1)
     if valid_mask.any():
         X = df.loc[valid_mask, features].values
         X_scaled = scaler.transform(X)
         X_pred_scaled = ae.predict(X_scaled)
         
-        # Mean Squared Error for overall anomaly score
         mse = np.mean(np.square(X_scaled - X_pred_scaled), axis=1)
         df.loc[valid_mask, "ae_anomaly_score"] = mse
         
-        # ARCANA logic: Feature with the highest absolute reconstruction error is the root cause
         abs_errors = np.abs(X_scaled - X_pred_scaled)
         max_error_indices = np.argmax(abs_errors, axis=1)
         root_causes = [features[i] for i in max_error_indices]
         df.loc[valid_mask, "root_cause_feature"] = root_causes
         
-        # Dynamic thresholds based on mse
         threshold_critical = np.percentile(mse, 95) if len(mse) > 20 else 2.0
         threshold_warning = np.percentile(mse, 85) if len(mse) > 20 else 1.0
         
-        # Minimum absolute thresholds to prevent alerting on noise
         threshold_critical = max(threshold_critical, 1.5)
         threshold_warning = max(threshold_warning, 0.8)
         
@@ -137,7 +123,6 @@ def detect_anomalies(row):
     """
     reasons = []
     
-    # Use autoencoder status if computed, else fallback to Normal
     status = row.get("ae_status", "Normal")
     root_cause = row.get("root_cause_feature", "Unknown")
     ae_score = row.get("ae_anomaly_score", 0.0)
@@ -145,7 +130,6 @@ def detect_anomalies(row):
     dev_pct = row.get("deviation_pct", 0)
     streak = row.get("consecutive_anomaly_count", 0)
     
-    # Fallback to rule-based if AE didn't trigger but classical rules are violated severely
     if status == "Normal":
         if dev_pct < -20 and streak >= 3:
             status = "Critical"

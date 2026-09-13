@@ -6,13 +6,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from main import app
 import time
 
-# Initialize app to trigger background seeding manually
 from db.session import engine, Base, SessionLocal
 from db.seed import seed_database
 from cache.analytics_store import store
 from db.models import Asset
 
-# Manual initialization for tests
 Base.metadata.create_all(bind=engine)
 db = SessionLocal()
 seed_database(db, force=True)
@@ -30,11 +28,9 @@ db.close()
 client = TestClient(app)
 
 def test_demo_injection_flow():
-    # 1. Reset
     resp = client.post("/api/demo/reset")
     assert resp.status_code == 200
     
-    # 2. Get asset to verify it's normal
     assets = client.get("/api/assets").json()
     if not assets:
         pytest.skip("No assets available")
@@ -43,7 +39,6 @@ def test_demo_injection_flow():
     
     initial = client.get(f"/api/assets/{target_asset}").json()
     
-    # 3. Inject fault
     resp = client.post("/api/demo/inject-fault", json={
         "asset_id": target_asset,
         "fault_type": "inverter_underperformance",
@@ -51,17 +46,14 @@ def test_demo_injection_flow():
     })
     assert resp.status_code == 200
     
-    # 4. Verify asset state changed
     updated = client.get(f"/api/assets/{target_asset}").json()
     
     assert updated["failure_risk"] > initial["failure_risk"]
     assert updated["priority_score"] > initial["priority_score"]
     
-    # 5. Check alerts
     alerts = client.get("/api/alerts").json()
     assert any(target_asset in a["message"] or target_asset == a["asset_id"] for a in alerts)
     
-    # 6. Reset again
     client.post("/api/demo/reset")
     restored = client.get(f"/api/assets/{target_asset}").json()
     assert restored["priority_score"] < updated["priority_score"]

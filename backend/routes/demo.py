@@ -18,7 +18,6 @@ from sse_starlette.sse import EventSourceResponse
 router = APIRouter(prefix="/demo")
 logger = logging.getLogger(__name__)
 
-# Very simple global state for SSE clients
 clients = []
 
 def notify_clients(message: str):
@@ -41,7 +40,6 @@ async def message_stream():
             
     return EventSourceResponse(event_generator())
 
-# --- Playback Engine Background Task ---
 _playback_task = None
 
 async def playback_loop():
@@ -58,32 +56,25 @@ async def playback_loop():
                 await asyncio.sleep(0.5)
                 continue
                 
-            # Sleep based on speed (100x = fast, 1x = slow)
-            # Assuming 15-minute data = 900 seconds. At 100x, 1 tick = 9s. We'll make it faster for demo.
             sleep_time = max(0.5, 90.0 / float(speed))
             await asyncio.sleep(sleep_time)
             
             with store.lock:
-                # Check if we reached the end of the data
                 first_aid = list(store.full_raw_data.keys())[0] if store.full_raw_data else None
                 if first_aid and store.playback_cursor >= len(store.full_raw_data[first_aid]):
-                    store.is_playing = False
-                    continue
+                    # Loop back to the beginning (or rather, start of the window)
+                    store.playback_cursor = 96
                 
-                # Advance cursor
                 store.playback_cursor += 1
 
-            # Process the new window for each asset
             asset_ids = list(store.full_raw_data.keys())
             for aid in asset_ids:
                 df_raw = store.get_raw(aid)
                 if df_raw is None or df_raw.empty:
                     continue
                 
-                # Apply injected faults if any
                 if aid in store.injected_faults:
                     fault = store.injected_faults[aid]
-                    # We mutate the last 12 rows up to cursor
                     start_mutate = max(0, len(df_raw) - 12)
                     target_idx = df_raw.index[start_mutate:]
                     
@@ -106,7 +97,6 @@ async def playback_loop():
                         if "vibration_mm_s" in df_raw.columns:
                             df_raw.loc[target_idx, "vibration_mm_s"] += (req_mag * 2)
 
-                # Re-run pipeline
                 df_processed = run_pipeline(aid, df_raw)
                 store.update_processed(aid, df_processed)
 
@@ -126,7 +116,6 @@ def start_playback_engine():
 async def startup_event():
     start_playback_engine()
 
-# --- Playback API Endpoints ---
 class PlaybackSpeedRequest(BaseModel):
     speed: int
 
@@ -158,14 +147,12 @@ def set_playback_speed(req: PlaybackSpeedRequest):
 
 @router.post("/inject-fault")
 def inject_fault(req: InjectFaultRequest, db: Session = Depends(get_db)):
-    # Register the fault in the store so playback applies it
     with store.lock:
         store.injected_faults[req.asset_id] = {
             "type": req.fault_type,
             "magnitude": req.fault_magnitude
         }
         
-    # Force an immediate pipeline run for responsive UI
     df_raw = store.get_raw(req.asset_id)
     if df_raw is not None:
         target_idx = df_raw.index[-12:]
@@ -204,7 +191,6 @@ def inject_fault(req: InjectFaultRequest, db: Session = Depends(get_db)):
 
 @router.post("/reset")
 def reset_demo(db: Session = Depends(get_db)):
-    # Clear all data
     with store.lock:
         store.full_raw_data.clear()
         store.processed_data.clear()
@@ -221,24 +207,31 @@ def reset_demo(db: Session = Depends(get_db)):
     notify_clients("demo_reset")
     return {"status": "success", "message": "All assets cleared"}
 
+def do_seed():
+    from db.session import SessionLocal
+    db = SessionLocal()
+    try:
+        from db.seed import seed_database
+        from db.models import Asset
+        seed_database(db, force=True)
+        
+        asset_ids = [a.id for a in db.query(Asset).all()]
+        store.load_from_disk(asset_ids)
+        
+        for aid in asset_ids:
+            df_raw = store.get_raw(aid)
+            if df_raw is not None and not df_raw.empty:
+                df_processed = run_pipeline(aid, df_raw)
+                store.update_processed(aid, df_processed)
+                
+        notify_clients("demo_reset")
+    finally:
+        db.close()
+
 @router.post("/seed")
-def seed_demo(db: Session = Depends(get_db)):
-    from db.seed import seed_database
-    seed_database(db, force=True)
-    
-    # Load back into cache
-    asset_ids = [a.id for a in db.query(Asset).all()]
-    store.load_from_disk(asset_ids)
-    
-    # Process baseline
-    for aid in asset_ids:
-        df_raw = store.get_raw(aid)
-        if df_raw is not None and not df_raw.empty:
-            df_processed = run_pipeline(aid, df_raw)
-            store.update_processed(aid, df_processed)
-            
-    notify_clients("demo_reset")
-    return {"status": "success", "message": "Sample assets loaded"}
+def seed_demo(background_tasks: BackgroundTasks):
+    background_tasks.add_task(do_seed)
+    return {"status": "success", "message": "Assets loading in background..."}
 
 
 @router.post("/resolve/{asset_id}")

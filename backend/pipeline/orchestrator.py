@@ -18,16 +18,13 @@ def run_pipeline(asset_id, df_asset, capacity_kw=None, tariff=None):
     """
     df = df_asset.copy()
 
-    # 1. Expected Model
     expected, model_status = compute_expected_power(asset_id, df, capacity_kw)
     df["expected_power"] = expected
 
-    # 2. Deviation Engine
     df = compute_deviation_metrics(df)
 
     df["asset_criticality"] = 0.5
     
-    # 2.5 Autoencoder Anomaly Detection (ARCANA inspired)
     from .anomaly_detector import detect_anomalies_vectorized
     df = detect_anomalies_vectorized(asset_id, df)
 
@@ -43,15 +40,12 @@ def run_pipeline(asset_id, df_asset, capacity_kw=None, tariff=None):
 
         fault_type, conf, ranked, action_plan = classify_fault(row, decision)
         
-        # Risk computation
         risk = compute_failure_risk(row)
         
-        # Economics computation
         row_for_econ = row.copy()
         row_for_econ["failure_risk"] = risk
         e_risk, r_risk = compute_economics(row_for_econ, tariff)
         
-        # Priority computation
         row_for_prio = row_for_econ.copy()
         row_for_prio["revenue_at_risk"] = r_risk
         row_for_prio["status"] = decision
