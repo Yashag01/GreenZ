@@ -5,6 +5,7 @@ import type { AssetSummary } from './types/api';
 import FleetSummary from './components/FleetSummary';
 import PriorityTable from './components/PriorityTable';
 import AssetDetailPanel from './components/AssetDetailPanel';
+import DataControls from './components/DataControls';
 import AlertsList from './components/AlertsList';
 import SystemHealthTab from './components/SystemHealthTab';
 import { supabase } from './api/supabase';
@@ -87,6 +88,8 @@ function MainDashboard() {
         </div>
         
         <div className="flex items-center gap-6">
+          <DataControls />
+          
           <div className="flex items-center gap-4 pl-6 border-l border-flux-charcoal/10">
 
             <Link to="/profile" className="text-xs font-bold uppercase tracking-wider text-flux-charcoal hover:text-flux-yellow transition-colors flex items-center gap-2">
