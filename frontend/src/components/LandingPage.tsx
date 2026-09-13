@@ -161,7 +161,7 @@ export default function LandingPage() {
             </p>
             <div className="bg-white p-6 rounded-xl border border-flux-charcoal/10 text-center shadow-inner">
               <div className="text-sm font-bold uppercase tracking-widest text-flux-charcoal/50 mb-1">Estimated Financial Loss</div>
-              <div className="font-anton text-5xl text-rose-500">45,200 <span className="text-xl text-flux-charcoal/40">/ day</span></div>
+              <div className="font-anton text-5xl text-rose-500">₹45,200 <span className="text-xl text-flux-charcoal/40">/ day</span></div>
             </div>
           </div>
 
@@ -174,12 +174,12 @@ export default function LandingPage() {
               <div className="bg-white/5 border border-white/10 p-4 rounded-xl flex-1">
                 <div className="text-rose-400 font-bold uppercase text-xs tracking-wider mb-2">Priority 1</div>
                 <div className="font-anton text-2xl">INV-012</div>
-                <div className="text-sm opacity-70">Loss: 12k (Thermal Derating)</div>
+                <div className="text-sm opacity-70">Loss: ₹12k (Thermal Derating)</div>
               </div>
               <div className="bg-white/5 border border-white/10 p-4 rounded-xl flex-1">
                 <div className="text-amber-400 font-bold uppercase text-xs tracking-wider mb-2">Priority 2</div>
                 <div className="font-anton text-2xl">WTG-005</div>
-                <div className="text-sm opacity-70">Loss: 8k (Pitch Fault)</div>
+                <div className="text-sm opacity-70">Loss: ₹8k (Pitch Fault)</div>
               </div>
             </div>
           </div>

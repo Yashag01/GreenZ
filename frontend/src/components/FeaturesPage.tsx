@@ -90,7 +90,7 @@ export default function FeaturesPage() {
               </li>
               <li className="flex items-start gap-3">
                 <CheckCircle2 className="text-flux-yellow mt-1 shrink-0" size={20} />
-                <span className="text-white/80">Loss = Power Deficit × Time Horizon × Tariff</span>
+                <span className="text-white/80">Loss = Power Deficit × Time Horizon × Tariff (₹)</span>
               </li>
             </ul>
           </div>
@@ -98,7 +98,7 @@ export default function FeaturesPage() {
             <div className="bg-white p-8 rounded-3xl text-flux-charcoal text-center shadow-2xl max-w-md w-full relative">
               <div className="absolute -top-4 -right-4 bg-rose-500 text-white font-bold uppercase tracking-widest text-xs px-4 py-2 rounded-full shadow-lg">Alert</div>
               <div className="text-sm font-bold uppercase tracking-widest text-flux-charcoal/50 mb-2">Estimated Financial Loss</div>
-              <div className="font-anton text-6xl text-rose-500 mb-2">45,200</div>
+              <div className="font-anton text-6xl text-rose-500 mb-2">₹45,200</div>
               <div className="text-xl text-flux-charcoal/40 font-medium pb-6 border-b border-flux-charcoal/10">/ day</div>
               <div className="mt-6 flex justify-between text-sm font-medium">
                 <span className="text-flux-charcoal/60">Asset</span>
@@ -124,9 +124,9 @@ export default function FeaturesPage() {
         <div className="flex-1 bg-[#f8f9fa] rounded-3xl p-8 border border-flux-charcoal/10 shadow-xl w-full">
             <div className="flex flex-col gap-4">
               {[
-                { rank: 1, name: 'INV-012', loss: '12k', fault: 'Thermal Derating', bg: 'bg-rose-500/10 text-rose-600 border-rose-500/20' },
-                { rank: 2, name: 'WTG-005', loss: '8k', fault: 'Pitch Fault', bg: 'bg-amber-500/10 text-amber-600 border-amber-500/20' },
-                { rank: 3, name: 'INV-002', loss: '1k', fault: 'Soiling', bg: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' },
+                { rank: 1, name: 'INV-012', loss: '₹12k', fault: 'Thermal Derating', bg: 'bg-rose-500/10 text-rose-600 border-rose-500/20' },
+                { rank: 2, name: 'WTG-005', loss: '₹8k', fault: 'Pitch Fault', bg: 'bg-amber-500/10 text-amber-600 border-amber-500/20' },
+                { rank: 3, name: 'INV-002', loss: '₹1k', fault: 'Soiling', bg: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' },
               ].map((item, i) => (
                 <div key={i} className={clsx("p-4 rounded-xl border flex items-center justify-between", item.bg)}>
                   <div className="flex items-center gap-4">

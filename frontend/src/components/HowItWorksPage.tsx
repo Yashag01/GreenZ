@@ -172,7 +172,7 @@ export default function HowItWorksPage() {
                  <div className="flex justify-between items-end">
                    <div>
                      <div className="text-sm font-bold uppercase tracking-wider text-flux-charcoal/50 mb-1">Financial Impact</div>
-                     <div className="font-anton text-4xl text-rose-500">24,500 <span className="text-lg text-flux-charcoal/40">/ day</span></div>
+                     <div className="font-anton text-4xl text-rose-500">₹24,500 <span className="text-lg text-flux-charcoal/40">/ day</span></div>
                    </div>
                    <button className="bg-flux-charcoal text-white px-4 py-2 rounded-lg font-medium hover:bg-flux-dark transition-colors">
                      Dispatch Team
