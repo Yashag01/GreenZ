@@ -44,6 +44,7 @@ _playback_task = None
 
 async def playback_loop():
     logger.info("Playback loop started.")
+    previous_active_risk_ids = set()
     while True:
         try:
             is_playing = False
@@ -56,7 +57,7 @@ async def playback_loop():
                 await asyncio.sleep(0.5)
                 continue
                 
-            sleep_time = max(0.5, 90.0 / float(speed))
+            sleep_time = max(0.05, 0.5 / float(speed))
             await asyncio.sleep(sleep_time)
             
             with store.lock:
@@ -68,6 +69,8 @@ async def playback_loop():
                 store.playback_cursor += 1
 
             asset_ids = list(store.full_raw_data.keys())
+            active_risk_ids = []
+            
             for aid in asset_ids:
                 df_raw = store.get_raw(aid)
                 if df_raw is None or df_raw.empty:
@@ -99,8 +102,25 @@ async def playback_loop():
 
                 df_processed = run_pipeline(aid, df_raw)
                 store.update_processed(aid, df_processed)
+                
+                if not df_processed.empty:
+                    last_row = df_processed.iloc[-1]
+                    if last_row.get("decision_status") == "Inspect Now":
+                        active_risk_ids.append(aid)
 
-            notify_clients("tick")
+            import json
+            payload = json.dumps({
+                "type": "playback_update",
+                "active_risk_ids": active_risk_ids
+            })
+            notify_clients(payload)
+            
+            # Time Dilation: Pause for 2 seconds if a NEW risk is detected
+            current_risk_set = set(active_risk_ids)
+            new_risks = current_risk_set - previous_active_risk_ids
+            if new_risks:
+                await asyncio.sleep(2.0)
+            previous_active_risk_ids = current_risk_set
 
         except Exception as e:
             logger.error(f"Playback error: {e}")

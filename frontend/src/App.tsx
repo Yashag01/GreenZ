@@ -5,7 +5,7 @@ import type { AssetSummary } from './types/api';
 import FleetSummary from './components/FleetSummary';
 import PriorityTable from './components/PriorityTable';
 import AssetDetailPanel from './components/AssetDetailPanel';
-import DataControls from './components/DataControls';
+import DemoControls from './components/DemoControls';
 import AlertsList from './components/AlertsList';
 import SystemHealthTab from './components/SystemHealthTab';
 import { supabase } from './api/supabase';
@@ -16,6 +16,7 @@ const queryClient = new QueryClient();
 
 function MainDashboard() {
   const [assets, setAssets] = useState<AssetSummary[]>([]);
+  const [activeRiskIds, setActiveRiskIds] = useState<string[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string>('');
   const [filterType, setFilterType] = useState<'all' | 'solar' | 'wind'>('all');
@@ -57,6 +58,16 @@ function MainDashboard() {
       console.log("SSE Message:", event.data);
       if (event.data === "demo_reset" || event.data.startsWith("asset_updated:") || event.data.startsWith("asset_deleted:")) {
         loadData();
+      } else if (event.data.startsWith("{")) {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.type === "playback_update") {
+            setActiveRiskIds(payload.active_risk_ids || []);
+            loadData(); // Re-fetch assets to get updated scores and anomalies
+          }
+        } catch (e) {
+          console.error("Failed to parse SSE JSON", e);
+        }
       }
     };
     
@@ -88,7 +99,7 @@ function MainDashboard() {
         </div>
         
         <div className="flex items-center gap-6">
-          <DataControls />
+          <DemoControls />
           
           <div className="flex items-center gap-4 pl-6 border-l border-flux-charcoal/10">
 
@@ -155,7 +166,11 @@ function MainDashboard() {
         {viewMode === 'fleet' ? (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1">
             <div className="lg:col-span-3 flex flex-col gap-6">
-              <PriorityTable assets={filteredAssets} onSelect={setSelectedAsset} />
+              <PriorityTable 
+                assets={filteredAssets} 
+                onSelect={setSelectedAsset}
+                activeRiskIds={activeRiskIds}
+              />
             </div>
             <div className="lg:col-span-1 flex flex-col gap-6">
               <AlertsList />

@@ -1,4 +1,4 @@
-
+import { useEffect, useRef } from 'react';
 import type { AssetSummary } from '../types/api';
 import clsx from 'clsx';
 import { AlertCircle, ArrowRight, Download } from 'lucide-react';
@@ -6,9 +6,10 @@ import { AlertCircle, ArrowRight, Download } from 'lucide-react';
 interface Props {
   assets: AssetSummary[];
   onSelect: (id: string) => void;
+  activeRiskIds?: string[];
 }
 
-export default function PriorityTable({ assets, onSelect }: Props) {
+export default function PriorityTable({ assets, onSelect, activeRiskIds = [] }: Props) {
   const handleExport = () => {
     const headers = ['Rank', 'Asset ID', 'Type', 'Status', 'Risk Score', 'Likely Condition', 'Energy at Risk (kWh)', 'Est. Financial Loss', 'Priority Score'];
     const rows = assets.map(a => [
@@ -35,6 +36,25 @@ export default function PriorityTable({ assets, onSelect }: Props) {
     link.click();
     document.body.removeChild(link);
   };
+  
+  const lastScrolledId = useRef<string | null>(null);
+  const lastScrollTime = useRef<number>(0);
+
+  useEffect(() => {
+    if (activeRiskIds.length > 0) {
+      const primaryId = activeRiskIds[0];
+      const now = Date.now();
+      
+      if (primaryId !== lastScrolledId.current && (now - lastScrollTime.current > 2000)) {
+        const activeRow = document.getElementById(`asset-row-${primaryId}`);
+        if (activeRow) {
+          activeRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          lastScrolledId.current = primaryId;
+          lastScrollTime.current = now;
+        }
+      }
+    }
+  }, [activeRiskIds]);
 
   return (
     <div className="panel flex-1 flex flex-col p-0 overflow-hidden">
@@ -54,8 +74,8 @@ export default function PriorityTable({ assets, onSelect }: Props) {
         </button>
       </div>
       
-      <div className="overflow-x-auto flex-1 bg-white">
-        <table className="w-full text-left text-sm whitespace-nowrap">
+      <div className="overflow-auto max-h-[600px]">
+        <table className="w-full text-left border-collapse text-sm whitespace-nowrap">
           <thead className="bg-[#f8f9fa] border-b-2 border-flux-charcoal/10">
             <tr className="text-xs font-bold uppercase tracking-wider text-flux-charcoal/60">
               <th className="py-4 px-6 w-16">Rank</th>
@@ -70,59 +90,66 @@ export default function PriorityTable({ assets, onSelect }: Props) {
             </tr>
           </thead>
           <tbody className="divide-y divide-flux-charcoal/5 font-medium">
-            {assets.map((asset) => (
-              <tr 
-                key={asset.id} 
-                className={clsx(
-                  "hover:bg-flux-charcoal/5 transition-colors group cursor-pointer",
-                  asset.priority_rank === 1 && asset.decision_status !== 'Monitor' && "border-l-4 border-l-rose-500 bg-rose-50/50"
-                )}
-                onClick={() => onSelect(asset.id)}
-              >
-                <td className="py-4 px-6 font-anton text-xl text-flux-charcoal/40">#{asset.priority_rank}</td>
-                <td className="py-4 px-4 text-flux-charcoal font-bold">{asset.id}</td>
-                <td className="py-4 px-4 text-flux-charcoal/60 capitalize">{asset.type}</td>
-                <td className="py-4 px-4">
-                  <span className={clsx(
-                    'px-2 py-1 rounded text-xs font-bold uppercase tracking-wider',
-                    asset.decision_status === 'Inspect Now' && 'bg-rose-100 text-rose-700',
-                    (asset.decision_status === 'Schedule Inspection' || asset.decision_status === 'Watch') && 'bg-amber-100 text-amber-700',
-                    asset.decision_status === 'Monitor' && 'bg-emerald-100 text-emerald-700'
-                  )}>
-                    {asset.decision_status || asset.status}
-                  </span>
-                </td>
-                <td className="py-4 px-4 text-right font-mono font-bold">
-                  <span className={asset.failure_risk > 50 ? 'text-amber-600' : 'text-flux-charcoal/60'}>
-                    {asset.failure_risk.toFixed(1)}%
-                  </span>
-                </td>
-                <td className="py-4 px-4">
-                  {asset.ranked_conditions && asset.ranked_conditions.length > 0 && asset.ranked_conditions[0].condition_name !== 'Normal Operation' ? (
-                    <span className="text-rose-600 font-bold bg-rose-50 px-2 py-1 rounded">{asset.ranked_conditions[0].condition_name}</span>
-                  ) : asset.fault_type !== 'None' ? (
-                    <span className="text-rose-600 font-bold bg-rose-50 px-2 py-1 rounded">{asset.fault_type}</span>
-                  ) : (
-                    <span className="text-flux-charcoal/30">-</span>
+            {assets.map((asset) => {
+              const isActive = activeRiskIds.includes(asset.id);
+              return (
+                <tr 
+                  key={asset.id} 
+                  id={`asset-row-${asset.id}`}
+                  onClick={() => onSelect(asset.id)}
+                  className={clsx(
+                    "group cursor-pointer transition-all duration-300",
+                    isActive 
+                      ? "bg-rose-900/20 ring-2 ring-rose-500 animate-pulse scanner-effect relative overflow-hidden" 
+                      : "hover:bg-flux-charcoal/5",
+                    asset.priority_rank === 1 && asset.decision_status !== 'Monitor' && "border-l-4 border-l-rose-500 bg-rose-50/50"
                   )}
-                </td>
-                <td className="py-4 px-4 text-right font-mono font-bold">
-                  {asset.revenue_at_risk > 0 ? (
-                    <span className="text-rose-600">₹{asset.revenue_at_risk.toLocaleString()}</span>
-                  ) : (
-                    <span className="text-flux-charcoal/30">-</span>
-                  )}
-                </td>
-                <td className="py-4 px-4 text-right font-mono font-bold text-flux-charcoal">
-                  {asset.priority_score.toFixed(1)}
-                </td>
-                <td className="py-4 px-6 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="w-8 h-8 rounded-full bg-flux-charcoal text-white flex items-center justify-center ml-auto">
-                    <ArrowRight size={16} />
-                  </div>
-                </td>
-              </tr>
-            ))}
+                >
+                  <td className="py-4 px-6 font-anton text-xl text-flux-charcoal/40">#{asset.priority_rank}</td>
+                  <td className="py-4 px-4 text-flux-charcoal font-bold">{asset.id}</td>
+                  <td className="py-4 px-4 text-flux-charcoal/60 capitalize">{asset.type}</td>
+                  <td className="py-4 px-4">
+                    <span className={clsx(
+                      'px-2 py-1 rounded text-xs font-bold uppercase tracking-wider',
+                      asset.decision_status === 'Inspect Now' && 'bg-rose-100 text-rose-700',
+                      (asset.decision_status === 'Schedule Inspection' || asset.decision_status === 'Watch') && 'bg-amber-100 text-amber-700',
+                      asset.decision_status === 'Monitor' && 'bg-emerald-100 text-emerald-700'
+                    )}>
+                      {asset.decision_status || asset.status}
+                    </span>
+                  </td>
+                  <td className="py-4 px-4 text-right font-mono font-bold">
+                    <span className={asset.failure_risk > 50 ? 'text-amber-600' : 'text-flux-charcoal/60'}>
+                      {asset.failure_risk.toFixed(1)}%
+                    </span>
+                  </td>
+                  <td className="py-4 px-4">
+                    {asset.ranked_conditions && asset.ranked_conditions.length > 0 && asset.ranked_conditions[0].condition_name !== 'Normal Operation' ? (
+                      <span className="text-rose-600 font-bold bg-rose-50 px-2 py-1 rounded">{asset.ranked_conditions[0].condition_name}</span>
+                    ) : asset.fault_type !== 'None' ? (
+                      <span className="text-rose-600 font-bold bg-rose-50 px-2 py-1 rounded">{asset.fault_type}</span>
+                    ) : (
+                      <span className="text-flux-charcoal/30">-</span>
+                    )}
+                  </td>
+                  <td className="py-4 px-4 text-right font-mono font-bold">
+                    {asset.revenue_at_risk > 0 ? (
+                      <span className="text-rose-600">₹{asset.revenue_at_risk.toLocaleString()}</span>
+                    ) : (
+                      <span className="text-flux-charcoal/30">-</span>
+                    )}
+                  </td>
+                  <td className="py-4 px-4 text-right font-mono font-bold text-flux-charcoal">
+                    {asset.priority_score.toFixed(1)}
+                  </td>
+                  <td className="py-4 px-6 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="w-8 h-8 rounded-full bg-flux-charcoal text-white flex items-center justify-center ml-auto">
+                      <ArrowRight size={16} />
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
