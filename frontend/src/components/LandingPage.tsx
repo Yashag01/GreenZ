@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { X, CheckCircle2, ChevronRight, Play } from 'lucide-react';
-import clsx from 'clsx';
+
 
 export default function LandingPage() {
   const [email, setEmail] = useState('');

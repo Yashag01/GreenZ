@@ -5,7 +5,7 @@ import type { PlaybackState } from '../types/api';
 
 export default function DemoControls() {
   const [loading, setLoading] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+
   const [showSpeedDropdown, setShowSpeedDropdown] = useState(false);
   const [playbackState, setPlaybackState] = useState<PlaybackState | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);

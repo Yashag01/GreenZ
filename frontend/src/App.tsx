@@ -10,7 +10,7 @@ import AlertsList from './components/AlertsList';
 import SystemHealthTab from './components/SystemHealthTab';
 import { supabase } from './api/supabase';
 import { useNavigate, Link } from 'react-router-dom';
-import { LogOut, Wrench, Shield, Users } from 'lucide-react';
+import { LogOut, Wrench, Users } from 'lucide-react';
 
 const queryClient = new QueryClient();
 

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { AssetSummary } from '../types/api';
-import { Target, TrendingDown, AlertTriangle, Download } from 'lucide-react';
+import { Target, AlertTriangle, Download } from 'lucide-react';
 import clsx from 'clsx';
 
 export default function SystemHealthTab({ assets, onSelectAsset }: { assets: AssetSummary[], onSelectAsset: (id: string) => void }) {

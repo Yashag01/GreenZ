@@ -86,7 +86,7 @@ export default function AssetDetailPanel({ assetId, onClose }: { assetId: string
   const prevAssetRef = useRef<AssetDetail | null>(null);
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ name: '', type: '', location: '', capacity_kw: 0, criticality: 0.5 });
+  const [editForm, setEditForm] = useState({ name: '', type: '', location: '', capacity_kw: 0 });
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [selectedTechIndex, setSelectedTechIndex] = useState<number>(0);
 
@@ -135,8 +135,7 @@ export default function AssetDetailPanel({ assetId, onClose }: { assetId: string
         name: asset.name,
         type: asset.type,
         location: asset.location,
-        capacity_kw: asset.capacity_kw,
-        criticality: asset.criticality || 0.5
+        capacity_kw: asset.capacity_kw
       });
     }
   }, [asset, isEditing]);
@@ -145,8 +144,7 @@ export default function AssetDetailPanel({ assetId, onClose }: { assetId: string
     try {
       await updateAsset(assetId, {
         ...editForm,
-        capacity_kw: Number(editForm.capacity_kw),
-        criticality: Number(editForm.criticality)
+        capacity_kw: Number(editForm.capacity_kw)
       });
       setIsEditing(false);
     } catch (e) {
@@ -209,10 +207,7 @@ export default function AssetDetailPanel({ assetId, onClose }: { assetId: string
                   <input className="bg-flux-dark border border-white/10 text-white px-3 py-2 rounded w-1/3 focus:outline-none focus:border-flux-yellow" value={editForm.type} onChange={e => setEditForm({...editForm, type: e.target.value})} placeholder="Type" />
                   <input className="bg-flux-dark border border-white/10 text-white px-3 py-2 rounded w-2/3 focus:outline-none focus:border-flux-yellow" value={editForm.location} onChange={e => setEditForm({...editForm, location: e.target.value})} placeholder="Location" />
                 </div>
-                <div className="flex gap-2">
-                  <input type="number" className="bg-flux-dark border border-white/10 text-white px-3 py-2 rounded w-1/2 focus:outline-none focus:border-flux-yellow" value={editForm.capacity_kw} onChange={e => setEditForm({...editForm, capacity_kw: parseFloat(e.target.value)})} placeholder="Capacity (kW)" />
-                  <input type="number" step="0.1" className="bg-flux-dark border border-white/10 text-white px-3 py-2 rounded w-1/2 focus:outline-none focus:border-flux-yellow" value={editForm.criticality} onChange={e => setEditForm({...editForm, criticality: parseFloat(e.target.value)})} placeholder="Criticality (0.0-1.0)" />
-                </div>
+                <input type="number" className="bg-flux-dark border border-white/10 text-white px-3 py-2 rounded w-full focus:outline-none focus:border-flux-yellow" value={editForm.capacity_kw} onChange={e => setEditForm({...editForm, capacity_kw: parseFloat(e.target.value)})} placeholder="Capacity (kW)" />
               </div>
             ) : (
               <>
